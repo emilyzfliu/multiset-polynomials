@@ -1,7 +1,14 @@
 from math import cos, sin, pi
 
 class Multiset():
+    '''
+    Represents a multiset.
+    '''
     def __init__(self, s):
+        '''
+        Creates a multiset from list `s`, where element a with multiplicity k in the multiset
+        appears k times in `s`.
+        '''
         self.s = s
 
     def __getitem__(self, idx):
@@ -10,14 +17,29 @@ class Multiset():
     def has_value(self, value):
         return self.s.count(value)
 
+    def standard_rep(self):
+        '''
+        Returns the Standard Representation polynomial form of this multiset.
+        '''
+        return StandardPoly(self.s)
+
 class LagrangeBasesOfUnity():
+    '''
+    Represents the Lagrange Basis of the n polynomials over the nth roots of unity.
+    '''
     def __init__(self, n):
         self.n = n
     
     def __getitem__(self, i):
+        '''
+        Returns the Lagrange Basis polynomial for the ith of the nth roots of unity.
+        '''
         return lambda x: self._lagrange_polynomial(i, x)
 
     def _lagrange_polynomial(self, i, x):
+        '''
+        Returns L_i(x), i.e. the evaluation of the ith nth root of unity at x.
+        '''
         total = 1
         ith_root = self._kth_root_of_unity(i)
         for j in range(self.n):
@@ -27,21 +49,44 @@ class LagrangeBasesOfUnity():
         return total
 
     def _kth_root_of_unity(self, k):
+        '''
+        Returns the kth of the nth roots of unity.
+        '''
         return cos(2*k*pi/self.n) + sin(2*k*pi/self.n)*1j
 
 
 class StandardPoly():
+    '''
+    Represents a multiset in its "Standard Representation" polynomial form.
+    '''
     def __init__(self, coefficients):
-        pass
+        '''
+        Creates a polynomial that is a Standard Representation of a multiset
+        with `coefficients` as its elements.
+        '''
+        self.coefficients = coefficients
+        self.n = len(self.coefficients)
+        self.L = LagrangeBasesOfUnity(self.n)
+
+    def evaluate(self, x):
+        '''
+        Evaluates this Standard Polynomial at point x.
+        '''
+        total = 0
+        for i, a_i in enumerate(self.coefficients):
+            total += a_i * self.L[i](x)
+        return total
 
 
 def main():
-    L = LagrangeBasesOfUnity(3)
+    n = 32
 
-    for i in range(3):
+    L = LagrangeBasesOfUnity(n)
+
+    for i in range(n):
         root = L._kth_root_of_unity(i)
-        for j in range(3):
-            print(f'L_{j}(omega^{i}) = {L[j](root)}')
+        for j in range(n):
+            print(f'L_{j}(omega^{i}) = {round(L[j](root).real)}')
 
 
 
