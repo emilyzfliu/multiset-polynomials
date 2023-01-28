@@ -21,7 +21,13 @@ class Multiset():
         '''
         Returns the Standard Representation polynomial form of this multiset.
         '''
-        return StandardPoly(self.s)
+        return StandardRepPoly(self.s)
+    
+    def roots_rep(self, m=None):
+        '''
+        Returns the up-to-m Roots Representation polynomial form of this multiset.
+        '''
+        return RootsRepPoly(self.s, m)
 
 class LagrangeBasesOfUnity():
     '''
@@ -54,8 +60,7 @@ class LagrangeBasesOfUnity():
         '''
         return cos(2*k*pi/self.n) + sin(2*k*pi/self.n)*1j
 
-
-class StandardPoly():
+class StandardRepPoly():
     '''
     Represents a multiset in its "Standard Representation" polynomial form.
     '''
@@ -70,11 +75,34 @@ class StandardPoly():
 
     def evaluate(self, x):
         '''
-        Evaluates this Standard Polynomial at point x.
+        Evaluates this Standard Representation polynomial at point x.
         '''
         total = 0
         for i, a_i in enumerate(self.coefficients):
             total += a_i * self.L[i](x)
+        return total
+
+class RootsRepPoly():
+    '''
+    Represents a multiset in its "Roots Representation" polynomial form.
+    '''
+    def __init__(self, roots, m=None):
+        '''
+        Creates a polynomial that is a Roots Representation of the first `m` elements of a multiset.
+        This polynomial has value `a` as a root with multiplicity `k`
+        iff `a` appears `k` times in the multiset.
+        '''
+        self.roots = roots
+        self.n = len(self.roots)
+        self.m = m if m is not None else self.n
+
+    def evaluate(self, x):
+        '''
+        Evaluates this Roots Representation polynomial at point x.
+        '''
+        total = 1
+        for i in range(self.m):
+            total *= (x - self.roots[i])
         return total
 
 
