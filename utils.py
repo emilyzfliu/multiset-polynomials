@@ -106,6 +106,20 @@ class RootsRepPoly():
         return total
 
 
+class InverseRepPoly():
+    def __init__(self, vals):
+        '''Creates an inverse representation polynomial'''
+        self.vals = vals
+        self.n = len(self.vals)
+    
+    def evaluate(self, x, m=None):
+        '''Evaluates first m terms of inverse representation at point x'''
+        m = m if m is not None else self.n
+        total = 0
+        for i in range(m):
+            total += 1/(x - self.vals[i])
+        return total
+
 def main():
     n = 32
 
