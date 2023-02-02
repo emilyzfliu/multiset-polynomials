@@ -92,7 +92,8 @@ def step3(gamma, A, B):
     W_A = InverseRepPoly(A)
     Z = Z(gamma, W_A)
     Z_c = Commit(Z)
-    t_c = Commit(t(Z, W_A(gamma), gamma, A_poly))
+    y = W_A(gamma)
+    t_c = Commit(t(Z, y, gamma, A_poly))
     Z_B = RootsRepPoly(B)
     return Z_c, t_c, y, Z_B.evaluate(gamma)
 
