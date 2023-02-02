@@ -49,6 +49,7 @@ def poly_add(A, B):
     res = [a+b for a,b in itertools.zip_longest(reversed(A), reversed(B), fillvalue=0)]
     res.reverse()
     return res
+
 def intersection_check(z_A, z_B, z_C, c_A, c_B, P, Q):
     '''
     If we can show that the following holds, then A \cap B = C
@@ -67,6 +68,18 @@ def intersection_check(z_A, z_B, z_C, c_A, c_B, P, Q):
     z_C_coef = poly_root_form_to_coef_form(z_C)
     assert poly_add(poly_mul(P, z_A_coef), poly_mul(Q, z_B_coef)) == z_C_coef
 
+def main():
+    A = []
+    B = []
+    C = []
+
+    P = []
+    Q = []
+
+    c_A = []
+    c_B = []
+
+    intersection_check(A, B, C, c_A, c_B, P, Q)
 
 # if __name__ == "__main__":
 
