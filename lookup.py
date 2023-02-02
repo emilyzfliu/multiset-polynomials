@@ -136,10 +136,11 @@ def step5(gamma, delta, R, Z, t, A):
 def step6(Rg, y, ZBg, td, Zdw, Zd, N, gamma, Ad, ZH = 1):
     '''Verifier checks the equalities for their two challenges'''
     # check gamma equality
-    assert Rg * y == ZBg
+    gamma_equality = (Rg * y == ZBg)
 
     # check delta equality
-    assert td == ((Zdw - Zd + y/N)*(gamma - Ad) - 1)/ ZH
+    delta_equality = (td == ((Zdw - Zd + y/N)*(gamma - Ad) - 1) / ZH)
+    return 'accept' if gamma_equality and delta_equality else 'reject'
 
 
 def main():
