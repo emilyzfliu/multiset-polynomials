@@ -4,10 +4,12 @@ Implementation of lookup argument in https://zkresear.ch/t/new-lookup-argument/3
 from utils import *
 import random
 
+# we will work over the finite field Z_101 as a toy example
 P = 101
-N = 11 # our multiplicative subgroup will be [1, ..., 11]
-OMEGA = 2 # a generator thereof
-inverses = {
+# our multiplicative subgroup will be [1, ..., 11]
+N = 11
+OMEGA = 2 # a generator of the subgroup
+subgroup_inverses = {
     1 : 1,
     2 : 6,
     3 : 4,
