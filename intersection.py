@@ -1,85 +1,157 @@
 from utils import *
-import itertools
+import random
 
-def poly_root_form_to_coef_form(roots):
-    '''
-    roots is a list of roots or polynomial in the form of
-    (x-r_1)(x-r_2)...(x-r_n)
+P = 101
 
-    the function converts a list of roots into a list of coefficients, in the form of
-    [c_n, c_{n-1}, ..., c_0], where the coefficients are from
-    c_n x^n + c_{n-1} x^{n-1} + ... + c_0
+class Prover:
+    def __init__(self, A, B, C):
+        self.view = {}  # represents the "view" of the Prover: all information visible to them during the interactive protocol
+        self.view['A'] = A
+        self.view['B'] = B
+        self.view['B'] = C
 
-    used algorithm from
-    https://cs.stackexchange.com/questions/98107/calculating-a-polynomials-coefficients-from-its-roots
-    '''
-    i = len(roots)
-    if i == 1:
-        return [1, -1 * roots[0]]
-    else:
-        coef_i_m_1 = poly_root_form_to_coef_form(roots[:i-1])
-        coef_i = []
-        last_root = roots[i-1]
-        for k in range(i-1):
-            coef_i.append(-1 * coef_i_m_1[k] * last_root + coef_i_m_1[k+1])
-        coef_i.append(-1 * coef_i_m_1[i-1] * last_root)
-        coef_i = [1] + coef_i # add leading coefficient 1
-        return coef_i
+    def receive(self, message):
+        '''
+        Records a message sent by the Verifier.
 
-def poly_mul(A, B):
-    '''
-    A, B are two polynomials in coefficient form
-    return the result of polynomial multiplication in coef form
+        `message`: a dictionary of strings to values representing the contents of a message
+        in the interactive protocol
+        '''
+        self.view.update(**message)
 
-    adapted from https://stackoverflow.com/questions/5413158/multiplying-polynomials-in-python
-    '''
-    res = [0] * (len(A) + len(B) - 1)
-    for selfpow, selfco in enumerate(A):
-        for valpow, valco in enumerate(B):
-            res[selfpow + valpow] += selfco * valco
-    return res
+    def step1_compute_poly(self):
+        '''
+        Given multisets A, B, C, computes z_A, z_B, z_C
+        Then compute c_A, c_B, P, Q from z_A, z_B, z_C so that it satisfies the following
 
-def poly_add(A, B):
-    '''
-    A, B are two polynomials in coefficient form
-    return the result of polynomial addition in coef form
+        z_C * c_A = z_A
+        z_C * c_B = z_B
+        P * z_A + Q * z_B = z_C
 
-    adapted from https://stackoverflow.com/questions/5413158/multiplying-polynomials-in-python
-    '''
-    res = [a+b for a,b in itertools.zip_longest(reversed(A), reversed(B), fillvalue=0)]
-    res.reverse()
-    return res
+        P and Q can be found from extended Euclidean Algo
 
-def intersection_check(z_A, z_B, z_C, c_A, c_B, P, Q):
-    '''
-    If we can show that the following holds, then A \cap B = C
-    z_C * c_A = z_A
-    z_C * c_B = z_B
-    P * z_A + Q * z_B = z_C
+        Prover sends commitments of z_A, z_B, z_C, c_A, c_B, P, Q
+        '''
+        z_A = RootsRepPoly(self.view['A'])
+        z_B = RootsRepPoly(self.view['B'])
+        z_C = RootsRepPoly(self.view['C'])
 
-    z_A, z_B, z_C, c_A, c_B in roots form
-    P, Q in coefficient form
-    '''
-    assert sorted(z_C + c_A) == sorted(z_A)
-    assert sorted(z_C + c_B) == sorted(z_B)
+        P, Q = self.euclidean_algo(z_A, z_B, z_C)
 
-    z_A_coef = poly_root_form_to_coef_form(z_A)
-    z_B_coef = poly_root_form_to_coef_form(z_B)
-    z_C_coef = poly_root_form_to_coef_form(z_C)
-    assert poly_add(poly_mul(P, z_A_coef), poly_mul(Q, z_B_coef)) == z_C_coef
+        c_A = RootsRepPoly(list(set(z_C.roots).difference(set(z_A.roots))))
+        c_B = RootsRepPoly(list(set(z_C.roots).difference(set(z_B.roots))))
+
+        output = {
+            'z_A': Commit(z_A),
+            'z_B': Commit(z_B),
+            'z_C': Commit(z_C),
+            'P': Commit(P),
+            'Q': Commit(Q),
+            'c_A': Commit(c_A),
+            'c_B': Commit(c_B)
+        }
+
+        self.view.update(**output)
+
+        return output
+
+    def euclidean_algo(self, z_A, z_B, z_C):
+        '''
+        implementation of extended gcd algorithm to find P, Q
+
+        (currently unimplemented - we assume this works)
+        '''
+
+        P = RootsRepPoly([])
+        Q = RootsRepPoly([])
+
+        return P, Q
+
+    def step3_eval_poly(self):
+        '''
+        prover receives random point gamma, computes the following
+        z_A(gamma), z_B(gamma), z_C(gamma), c_A(gamma), c_B(gamma), P(gamma), Q(gamma)
+        and send it back to the verifier
+
+        '''
+        gamma = self.view['gamma']
+        z_A = self.view['z_A'].open()
+        z_B = self.view['z_B'].open()
+        z_C = self.view['z_C'].open()
+        c_A = self.view['c_A'].open()
+        c_B = self.view['c_B'].open()
+        P = self.view['P'].open()
+        Q = self.view['Q'].open()
+
+        output = {
+            'z_A(gamma)': z_A.evaluate(gamma),
+            'z_B(gamma)': z_B.evaluate(gamma),
+            'z_C(gamma)': z_C.evaluate(gamma),
+            'P(gamma)': P.evaluate(gamma),
+            'Q(gamma)': Q.evaluate(gamma),
+            'c_A(gamma)': c_A.evaluate(gamma),
+            'c_B(gamma)': c_B.evaluate(gamma)
+        }
+        return output
+
+
+class Verifier:
+    def __init__(self):
+        self.view = {}  # represents the "view" of the Verifier: all information visible to them during the interactive protocol
+
+    def receive(self, message):
+        '''
+        Records a message sent by the Prover.
+
+        `message`: a dictionary of strings to values representing the contents of a message
+        in the interactive protocol
+        '''
+        self.view.update(**message)
+
+    def step2_generate_random_pt(self):
+        '''
+        verifier sends over a random point in field F
+        '''
+        gamma = random.randint(0, P)
+        self.view['gamma'] = gamma
+        return gamma
+
+    def step4_intersection_check(self):
+        '''
+        checks that A \cap B = C
+        z_A, z_B, z_C, c_A, c_B, P, Q are polynomials in standard representation
+
+        gamma is a point randomly picked in field F
+
+        z_A, z_B, z_C are polynomials representing multisets A, B, and C in roots form
+        P, Q are polynomials constructed from Bezout's Thm, to show that C is a superset of A \cap B
+        c_A, c_B are polynomials constructed to show that C is subset of A \cap B
+
+
+        If we can show that the following holds for the set of polynomials {z_A, z_B, z_C, c_A, c_B, P, Q},
+        then A \cap B = C
+
+        z_C * c_A = z_A
+        z_C * c_B = z_B
+        P * z_A + Q * z_B = z_C
+        '''
+
+        z_A_gamma = self.view['z_A(gamma)']
+        z_B_gamma = self.view['z_B(gamma)']
+        z_C_gamma = self.view['z_B(gamma)']
+        c_A_gamma = self.view['c_A(gamma)']
+        c_B_gamma = self.view['c_B(gamma)']
+        P_gamma = self.view['P(gamma)']
+        Q_gamma = self.view['Q(gamma)']
+
+        assert z_C_gamma * c_A_gamma == z_A_gamma
+        assert z_C_gamma * c_B_gamma == z_B_gamma
+        assert P_gamma * z_A_gamma + Q_gamma * z_B_gamma == z_C_gamma
+
 
 def main():
-    A = []
-    B = []
-    C = []
 
-    P = []
-    Q = []
 
-    c_A = []
-    c_B = []
-
-    intersection_check(A, B, C, c_A, c_B, P, Q)
 
 # if __name__ == "__main__":
 
