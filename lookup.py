@@ -1,10 +1,9 @@
+'''
+Implementation of lookup argument in https://zkresear.ch/t/new-lookup-argument/32.
+'''
 from utils import *
 import random
 
-'''
-    Implementation of lookup argument in https://zkresear.ch/t/new-lookup-argument/32.
-
-'''
 P = 101
 N = 11 # our multiplicative subgroup will be [1, ..., 11]
 OMEGA = 2 # a generator thereof
