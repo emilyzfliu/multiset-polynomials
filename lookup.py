@@ -25,7 +25,7 @@ SUBGROUP_INVERSES = {
 # Prover/Verifier sharing a reference to the ModularInverter instantiated in F
 # will lead to minor speedup due to mutually accessible cachings of computed inverses
 MODULAR_INVERTER = ModularInverter(P)
-LAGRANGE_BASIS = LagrangeBasis(N, OMEGA, SUBGROUP_INVERSES)
+LAGRANGE_BASIS = LagrangeBasis(P, N, OMEGA, SUBGROUP_INVERSES)
 
 class StandardRepPoly():
     '''
@@ -342,18 +342,22 @@ class Verifier:
         delta_equality_RHS = delta_equality_RHS % P
         delta_equality = (delta_equality_LHS == delta_equality_RHS)
 
+        print(self.view)
+        print(gamma_equality)
+        print(delta_equality)
+
         return 'accept' if gamma_equality and delta_equality else 'reject'
 
 def main():
     # the premise is that A is private to the prover, but B is publicly known
-    A = [1, 2, 7]
+    A = [1, 2, 2, 12]
     B = [1, 2, 3, 7, 9]
 
     # routine assertions — otherwise the protocol doesn't apply as this isn't an accepting instance of the language
     assert N < P
     assert len(A) <= N
     assert len(B) <= N
-    assert set(A).issubset(set(B))
+    # assert set(A).issubset(set(B))
 
     prover = Prover(A, B)
     verifier = Verifier(B)

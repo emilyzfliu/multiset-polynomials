@@ -25,14 +25,15 @@ class Commit:
 
 class LagrangeBasis():
     '''
-    Represents the Lagrange Basis over a multiplicative subgroup of order N.
+    Represents the Lagrange Basis over a multiplicative subgroup of order N in a finite field of order P.
     Specifically we assume we are working with the multiplicative subgroup over Z_{N+1} \ {0}.
 
     N: order of the multiplicative subgroup
     omega: a generator of the subgroup
     inverses_dict: a dictionary mapping an element of the subgroup to its inverse
     '''
-    def __init__(self, N, omega, inverses_dict):
+    def __init__(self, P, N, omega, inverses_dict):
+        self.P = P
         self.N = N
         self.omega = omega
         self.inverses_dict = inverses_dict
