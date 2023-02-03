@@ -253,7 +253,7 @@ class Prover:
         y = W_A.evaluate(gamma)
 
         self.view['Z'] = Z(gamma, W_A)
-        self.view['t'] = t(Z, y, gamma, A_poly)
+        self.view['t'] = t(self.view['Z'], y, gamma, A_poly)
 
         output = {'y': y,
                   'Z_B(gamma)': Z_B.evaluate(gamma),
