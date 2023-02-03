@@ -4,24 +4,24 @@ Implementation of lookup argument in https://zkresear.ch/t/new-lookup-argument/3
 from utils import Commit, ModularInverter
 import random
 
-# we will work over the finite field Z_101 as a toy example
-P = 101
-# our multiplicative subgroup will be [1, ..., 11]
-N = 11
-OMEGA = 2 # a generator of the subgroup
-subgroup_inverses = {
-    1 : 1,
-    2 : 6,
-    3 : 4,
-    4 : 3,
-    5 : 9,
-    6 : 2,
-    7 : 8,
-    8 : 7,
-    9 : 5,
-    10 : 10,
-}
-
+class FiniteField():
+    '''
+    Represents the finite field and multiplicative subgroup used in this protocol.
+    Merely a wrapper for the values and objects to make the Prover/Verifier
+    constructor signatures more principled.
+    '''
+    def __init__(self, P, N, omega, subgroup_inverses):
+        '''
+        Construct a struct representing a finite field of order `P`
+        containing a multiplicative subgroup of order `N`, generator `omega`,
+        and dictionary of inverses `subgroup_inverses`.
+        '''
+        self.P = P
+        self.modular_inverter = ModularInverter(self.P)
+        self.N = N
+        self.omega = omega
+        self.subgroup_inverses = subgroup_inverses
+        self.L = LagrangeBasis(self.N, self.omega, self.subgroup_inverses)
 
 class LagrangeBasis():
     '''
@@ -117,7 +117,7 @@ class LagrangeInterpolationPoly():
     '''
     Represents a set of numbers and evaluations in polynomial form
     '''
-    def __init__(self, xs, ys):
+    def __init__(self, xs, ys, F):
         '''
         Creates a polynomial that is a Roots Representation of the first `m` elements of a multiset.
         This polynomial has value `a` as a root with multiplicity `k`
@@ -133,7 +133,7 @@ class LagrangeInterpolationPoly():
                 if j == i:
                     continue
                 denom += (xs[i] - xs[j])
-            denom = modular_inverse(denom)
+            denom = F.modular_inverter.modular_inverse(denom)
             polys.append(term)
             coeffs.append((ys[i]*denom))
 
@@ -173,9 +173,12 @@ class Z_H:
 
 
 class Prover:
-    def __init__(self, N, A, B):
+    def __init__(self, F, A, B):
+        '''
+        Creats a Prover engaging in this protocol over finite field `F`.
+        '''
         self.view = {} # represents the "view" of the Prover: all information visible to them during the interactive protocol
-        self.view['N'] = N
+        self.F = F
         self.view['A'] = A
         self.view['B'] = B
 
@@ -299,9 +302,12 @@ class Prover:
         return output
 
 class Verifier:
-    def __init__(self, N, B):
+    def __init__(self, F, B):
+        '''
+        Creates a Verifier engaging in this protocol over finite field `F`.
+        '''
         self.view = {} # represents the "view" of the Verifier: all information visible to them during the interactive protocol
-        self.view['N'] = N
+        self.F = F
         self.view['B'] = B
         # TODO refactor as multiset
     
@@ -322,18 +328,20 @@ class Verifier:
         yet still have the polynomial identities coincidentally check out on this uniformly
         sampled field point is quite low, assuming the polynomials have degree << |F|.
         '''
-        output = {'gamma': random.randint(0, P)}
+        output = {'gamma': random.randint(0, self.F.P)}
         self.view.update(**output)
         return output
 
     def step4(self):
         '''Verifier issues a second challenge, called delta, for t'''
-        output = {'delta': random.randint(0, P)}
+        output = {'delta': random.randint(0, self.F.P)}
         self.view.update(**output)
         return output
     
     def step6(self):
         '''Verifier checks the equalities for their two challenges'''
+        P = self.F.P
+        N = self.F.N
 
         R_g = self.view['R(gamma)']
         y = self.view['y']
@@ -341,7 +349,6 @@ class Verifier:
         t_d = self.view['t(delta)']
         Z_wd = self.view['Z(w*delta)']
         Z_d = self.view['Z(delta)']
-        N = self.view['N']
         gamma = self.view['gamma']
         A_d = self.view['A(delta)']
         delta = self.view['delta']
@@ -356,13 +363,30 @@ class Verifier:
         return 'accept' if gamma_equality and delta_equality else 'reject'
 
 def main():
-    # TODO refactor with these as Multisets
-    N = 16
+    # we will work over the finite field Z_101 as a toy example
+    P = 101
+    # our multiplicative subgroup will be [1, ..., 11]
+    N = 11
+    omega = 2 # a generator of the subgroup
+    subgroup_inverses = {
+        1 : 1,
+        2 : 6,
+        3 : 4,
+        4 : 3,
+        5 : 9,
+        6 : 2,
+        7 : 8,
+        8 : 7,
+        9 : 5,
+        10 : 10,
+    }
+    F = FiniteField(P, N, omega, subgroup_inverses)
+
     A = [1, 2, 7]
     B = [1, 2, 3, 7, 9]
     # the premise is that A is private to the prover, but B is publicly known
-    prover = Prover(N, A, B)
-    verifier = Verifier(N, B)
+    prover = Prover(F, A, B)
+    verifier = Verifier(F, B)
 
     message1 = prover.step1()
     verifier.receive(message1)
