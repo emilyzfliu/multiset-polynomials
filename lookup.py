@@ -16,27 +16,6 @@ import random
 '''
 P = 10**9 + 7
 
-class Commit:
-    '''
-    Represents a cryptographic commitment to a polynomial x (e.g., KZG).
-    '''
-    def __init__(self, x, g=1):
-        '''
-        Creates a commitment to polynomial `x`.
-        For this toy example, we simply store x in plaintext.
-
-        x: polynomial to be committed to
-        g: the generator of a group, to be used if we actually did KZG commitment
-        '''
-        self.g = g
-        self.x = x
-    
-    def open(self):
-        '''
-        Opens the commitment to the polynomial, exposing it in plaintext.
-        '''
-        return self.x
-
 class Z_H:
     '''
     Represents the vanishing polynomial for the Nth roots of unity.

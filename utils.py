@@ -126,6 +126,28 @@ class InverseRepPoly():
             total += 1/(x - self.vals[i])
         return total
 
+class Commit:
+    '''
+    Represents a cryptographic commitment to a polynomial x (e.g., KZG).
+    '''
+
+    def __init__(self, x, g=1):
+        '''
+        Creates a commitment to polynomial `x`.
+        For this toy example, we simply store x in plaintext.
+
+        x: polynomial to be committed to
+        g: the generator of a group, to be used if we actually did KZG commitment
+        '''
+        self.g = g
+        self.x = x
+
+    def open(self):
+        '''
+        Opens the commitment to the polynomial, exposing it in plaintext.
+        '''
+        return self.x
+
 def main():
     n = 32
 
