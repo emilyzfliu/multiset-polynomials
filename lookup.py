@@ -39,7 +39,7 @@ class Z_H:
         total = 1
         for i in range(self.N):
             total *= (x - self.roots.omega(i))
-        return total
+        return total % P
 
 
 class Prover:
@@ -81,7 +81,7 @@ class Prover:
                 ret = 0
                 for term in self.terms:
                     ret += term.evaluate(x)
-                return ret*self.extra_poly.evaluate(x)
+                return (ret*self.extra_poly.evaluate(x)) % P
         
         A = self.view['A']
         B = self.view['B']
@@ -109,10 +109,10 @@ class Prover:
             
             def z_omega(self, k):
                 '''Evaluates Z(omega^k).'''
-                return self.Z1 - (self.y / self.N) * k + self.W.evaluate(self.gamma, k)
+                return (self.Z1 - (self.y / self.N) * k + self.W.evaluate(self.gamma, k)) % P
             
             def evaluate(self, x):
-                return self.poly.evaluate(x)
+                return self.poly.evaluate(x) % P
 
         class t():
             #  t(x) := \frac{1}{Z_H(X)} \left(\left(Z(\omega X) - Z(X) + \frac{y}{N}\right) \left(\gamma - A(X)\right) - 1\right)
@@ -130,7 +130,7 @@ class Prover:
                 ret = self.Z.evaluate(k+1) - self.Z.evaluate(k) + self.y/self.N
                 ret *= self.gamma - self.A.evaluate(k)
                 ret -= 1
-                return ret / self.Z_H.evaluate(k)
+                return (ret / self.Z_H.evaluate(k)) % P
 
         A = self.view['A']
         B = self.view['B']
@@ -219,10 +219,10 @@ class Verifier:
 
 
         # check gamma equality
-        gamma_equality = (R_g * y == Z_B_g)
+        gamma_equality = ((R_g * y) % P == Z_B_g)
 
         # check delta equality
-        delta_equality = (t_d == ((Z_wd - Z_d + y/N)*(gamma - A_d) - 1) / Z_H_d)
+        delta_equality = (t_d == (((Z_wd - Z_d + y/N)*(gamma - A_d) - 1) / Z_H_d) % P)
         return 'accept' if gamma_equality and delta_equality else 'reject'
 
 def main():
