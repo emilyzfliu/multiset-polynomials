@@ -5,7 +5,21 @@ import random
     Implementation of lookup argument in https://zkresear.ch/t/new-lookup-argument/32.
 
 '''
-P = 10**9 + 7
+P = 101
+N = 11 # our multiplicative subgroup will be [1, ..., 11]
+OMEGA = 2 # a generator thereof
+inverses = {
+    1 : 1,
+    2 : 6,
+    3 : 4,
+    4 : 3,
+    5 : 9,
+    6 : 2,
+    7 : 8,
+    8 : 7,
+    9 : 5,
+    10 : 10,
+}
 
 class Z_H:
     '''
@@ -189,13 +203,8 @@ class Verifier:
         self.view.update(**output)
         return output
     
-    def step6(self, Rg, y, ZBg, td, Zdw, Zd, N, gamma, Ad, ZH = 1):
+    def step6(self):
         '''Verifier checks the equalities for their two challenges'''
-        output = {'R(gamma)': R.evaluate(gamma),
-                  'Z(delta)': Z.evaluate(delta),
-                  'Z(w*delta)': Z.evaluate(delta+1),
-                  't(delta)': t.evaluate(delta),
-                  'A(delta)': A.evaluate(delta)}
 
         R_g = self.view['R(gamma)']
         y = self.view['y']
@@ -211,10 +220,10 @@ class Verifier:
 
 
         # check gamma equality
-        gamma_equality = (Rg * y == ZBg)
+        gamma_equality = (R_g * y == Z_B_g)
 
         # check delta equality
-        delta_equality = (td == ((Zdw - Zd + y/N)*(gamma - Ad) - 1) / ZH)
+        delta_equality = (t_d == ((Z_wd - Z_d + y/N)*(gamma - A_d) - 1) / Z_H_d)
         return 'accept' if gamma_equality and delta_equality else 'reject'
 
 def main():
@@ -246,33 +255,6 @@ def main():
         print('Verifier accepted the proof :)')
     else:
         print('Verifier rejected the proof :(')
-
-
-    # Step 1 commitments for A and R
-    # - evaluate R?
-    prover_view.update(**step1(A, B))
-    A_c = prover_view['A_c']
-    R_c = prover_view['R_c']
-
-    # Step 2 send random gamma
-    verifier_view.update(**step2())
-    gamma = verifier_view['gamma']
-
-    # Step 3 compute and send Z, t, y, Z_b gamma
-    prover_view.update(**step3(A, B))
-    # Z_c, t_c, y, Z_b = step3(A, B)
-
-    # Step 4 send random delta
-    verifier_view.update(**step4())
-    delta = verifier_view['delta']
-
-    # Step 5
-    # $R(\gamma)$, $Z(\delta)$, $Z(\omega \delta)$, $t(\delta)$, $A(\delta)$, $Z_H(\delta)$.
-    Rg, Zd, Zdw, td, Ad = step5(gamma, delta, R_c, Z_c, t_c, A_c)
-
-    # Step 6
-    step6(Rg, y, Z_b, td, Zdw, Zd, len(A), gamma, Ad)
-
 
 
 if __name__ == '__main__':
