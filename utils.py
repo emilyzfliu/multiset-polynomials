@@ -48,7 +48,7 @@ class LagrangeBasis():
         '''
         total = 1
         ith_root = (self.omega**i) % self.N
-        for j in range(self.n):
+        for j in range(self.N):
             if i != j:
                 jth_root = (self.omega**j) % self.N
                 total *= (x - jth_root) / (ith_root - jth_root)

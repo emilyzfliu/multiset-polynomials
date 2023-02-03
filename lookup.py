@@ -240,7 +240,7 @@ class Prover:
                 self.N = self.Z.N
 
             def evaluate(self, x):
-                denom = MODULAR_INVERTER.modular_inverse(Z_H.evaluate(x))
+                denom = MODULAR_INVERTER.modular_inverse(self.Z_H.evaluate(x))
                 term1 = self.Z.evaluate(OMEGA*x) - self.Z.evaluate(x) + (y * MODULAR_INVERTER.modular_inverse(N))
                 term2 = gamma - self.A_poly.evaluate(x)
                 return (denom * ((term1 * term2) - 1)) % P
