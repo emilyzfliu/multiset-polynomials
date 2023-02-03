@@ -21,7 +21,7 @@ class FiniteField():
         self.N = N
         self.omega = omega
         self.subgroup_inverses = subgroup_inverses
-        self.L = LagrangeBasis(self.N, self.omega, self.subgroup_inverses)
+        self.lagrange_basis = LagrangeBasis(self.N, self.omega, self.subgroup_inverses)
 
 class LagrangeBasis():
     '''
@@ -58,15 +58,15 @@ class StandardRepPoly():
     '''
     Represents a multiset in its "Standard Representation" polynomial form.
     '''
-    def __init__(self, N, coefficients):
+    def __init__(self, F, coefficients):
         '''
         Creates a polynomial that is a Standard Representation of a multiset
         with `coefficients` as its elements.
         '''
-        self.N = N
+        self.F = F
         self.coefficients = coefficients
         self.n = len(self.coefficients)
-        self.L = LagrangeBasis(self.N)
+        self.L = self.F.lagrange_basis
 
     def evaluate(self, x):
         '''
@@ -75,18 +75,19 @@ class StandardRepPoly():
         total = 0
         for i, a_i in enumerate(self.coefficients):
             total += a_i * self.L[i](x)
-        return total
+        return total % self.F.P
 
 class RootsRepPoly():
     '''
     Represents a multiset in its "Roots Representation" polynomial form.
     '''
-    def __init__(self, roots, m=None):
+    def __init__(self, F, roots, m=None):
         '''
         Creates a polynomial that is a Roots Representation of the first `m` elements of a multiset.
         This polynomial has value `a` as a root with multiplicity `k`
         iff `a` appears `k` times in the multiset.
         '''
+        self.F = F
         self.roots = roots
         self.n = len(self.roots)
         self.m = m if m is not None else self.n
@@ -98,11 +99,12 @@ class RootsRepPoly():
         total = 1
         for i in range(self.m):
             total *= (x - self.roots[i])
-        return total
+        return total % self.F.P
 
 class InverseRepPoly():
-    def __init__(self, vals):
+    def __init__(self, F, vals):
         '''Creates an inverse representation polynomial'''
+        self.F = F
         self.vals = vals
         self.n = len(self.vals)
     
@@ -112,13 +114,13 @@ class InverseRepPoly():
         total = 0
         for i in range(m):
             total += 1/(x - self.vals[i])
-        return total
+        return total % self.F.P
 
 class LagrangeInterpolationPoly():
     '''
     Represents a set of numbers and evaluations in polynomial form
     '''
-    def __init__(self, xs, ys, F):
+    def __init__(self, F, xs, ys):
         '''
         Creates a polynomial that is a Roots Representation of the first `m` elements of a multiset.
         This polynomial has value `a` as a root with multiplicity `k`
@@ -128,7 +130,7 @@ class LagrangeInterpolationPoly():
         polys = []
         coeffs = []
         for i in range(n):
-            term = RootsRepPoly(xs[:i] + xs[i+1:])
+            term = RootsRepPoly(F, xs[:i] + xs[i+1:])
             denom = 1
             for j in range(n):
                 if j == i:
@@ -138,6 +140,7 @@ class LagrangeInterpolationPoly():
             polys.append(term)
             coeffs.append((ys[i]*denom))
 
+        self.F = F
         self.polys = polys
         self.coeffs = coeffs
         self.n = n
@@ -149,7 +152,7 @@ class LagrangeInterpolationPoly():
         total = 0
         for i in range(self.n):
             total += self.coeffs[i]*self.polys[i].evaluate(x)
-        return total
+        return total % self.F.P
 
 class Z_H:
     '''
@@ -212,8 +215,8 @@ class Prover:
                 # the term for elt. i has the coefficients a_1,...,a_i-1,a_i+1,...,aN,(all elts of b not in a)
                 # so we can factor out the (all elts of b not in a) term, then compute the a-elt terms separately
                 for i in range(self.n):
-                    self.terms.append(RootsRepPoly(self.elts_a[:i] + self.elts_a[i+1:]))
-                self.extra_poly = RootsRepPoly(self.extra_elts)
+                    self.terms.append(RootsRepPoly(self.F, self.elts_a[:i] + self.elts_a[i+1:]))
+                self.extra_poly = RootsRepPoly(self.F, self.extra_elts)
             
             def evaluate(self, x):
                 ret = 0
@@ -223,7 +226,7 @@ class Prover:
         
         A = self.view['A']
         B = self.view['B']
-        output = {'A_c': Commit(StandardRepPoly(N, A)),
+        output = {'A_c': Commit(StandardRepPoly(self.F, A)),
                   'R_c': Commit(R(A, B))}
         self.view.update(**output)
         return output
@@ -246,7 +249,7 @@ class Prover:
                 self.Z1 = Z1 # the value that Z takes on at Z(1) = Z(omega^0) = Z(omega^N)
                 self.omegas = [] #TODO: omega**k for k in range self.N + 1
                 self.evals = [self.z_omega(k) for k in range(self.N+1)]
-                self.poly = LagrangeInterpolationPoly(self.omegas, self.evals)
+                self.poly = LagrangeInterpolationPoly(self.F, self.omegas, self.evals)
             
             def z_omega(self, k):
                 '''Evaluates Z(omega^k).'''
@@ -258,7 +261,7 @@ class Prover:
         class t():
             #  t(x) := \frac{1}{Z_H(X)} \left(\left(Z(\omega X) - Z(X) + \frac{y}{N}\right) \left(\gamma - A(X)\right) - 1\right)
             def __init__(self, Z, y, gamma, A):
-                self.Z_H = RootsRepPoly([])
+                self.Z_H = RootsRepPoly(self.F, [])
                 self.Z = Z
                 self.y = y
                 self.gamma = gamma
@@ -277,10 +280,10 @@ class Prover:
         B = self.view['B']
         gamma = self.view['gamma']
 
-        A_poly = StandardRepPoly(N, A)
-        W_A = InverseRepPoly(A)
+        A_poly = StandardRepPoly(self.F, A)
+        W_A = InverseRepPoly(self.F, A)
         y = W_A(gamma)
-        Z_B = RootsRepPoly(B)
+        Z_B = RootsRepPoly(self.F, B)
 
         self.view['Z'] = Z(gamma, W_A)
         self.view['t'] = t(Z, y, gamma, A_poly)
