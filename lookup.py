@@ -336,7 +336,7 @@ def main():
     B = [1, 2, 3, 7, 9]
 
     # routine assertions — otherwise the protocol doesn't apply as this isn't an accepting instance of the language
-    assert N < F
+    assert N < P
     assert len(A) <= N
     assert len(B) <= N
     assert set(A).issubset(set(B))
