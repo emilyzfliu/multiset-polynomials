@@ -29,12 +29,24 @@ class Multiset():
         '''
         return RootsRepPoly(self.s, m)
 
+class RootsOfUnity():
+    '''
+    Calculates the Nth roots of unity.
+    '''
+    def __init__(self, N):
+        self.N = N
+    
+    def omega(self, k):
+        '''Returns the kth Nth root of unity, omega^k.'''
+        return cos(2*k*pi/self.N) + sin(2*k*pi/self.N)*1j
+
 class LagrangeBasesOfUnity():
     '''
     Represents the Lagrange Basis of the n polynomials over the nth roots of unity.
     '''
     def __init__(self, n):
         self.n = n
+        self.roots = RootsOfUnity(self.n)
     
     def __getitem__(self, i):
         '''
@@ -47,18 +59,12 @@ class LagrangeBasesOfUnity():
         Returns L_i(x), i.e. the evaluation of the ith nth root of unity at x.
         '''
         total = 1
-        ith_root = self._kth_root_of_unity(i)
+        ith_root = self.roots.omega(i)
         for j in range(self.n):
             if i != j:
-                jth_root = self._kth_root_of_unity(j)
+                jth_root = self.roots.omega(j)
                 total *= (x - jth_root) / (ith_root - jth_root)
         return total
-
-    def _kth_root_of_unity(self, k):
-        '''
-        Returns the kth of the nth roots of unity.
-        '''
-        return cos(2*k*pi/self.n) + sin(2*k*pi/self.n)*1j
 
 class StandardRepPoly():
     '''
