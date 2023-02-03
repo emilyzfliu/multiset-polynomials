@@ -6,20 +6,21 @@ import random
 
 # we will work over the finite field Z_101 as a toy example
 P = 101
-# our multiplicative subgroup will be (Z_11 \ {0}, *) = [1, ..., 10]
+# our multiplicative subgroup will be [1, omega, omega^2, ...]
+# concretely, we are using [1, 6, 36, 14, 84, 100, 95, 65, 87, 17], which is of order 10
+OMEGA = 6 # the generator of this subgroup
 N = 10
-OMEGA = 2 # a generator of the subgroup
 SUBGROUP_INVERSES = {
     1 : 1,
-    2 : 6,
-    3 : 4,
-    4 : 3,
-    5 : 9,
-    6 : 2,
-    7 : 8,
-    8 : 7,
-    9 : 5,
-    10 : 10,
+    6 : 17,
+    36 : 87,
+    14 : 65,
+    84 : 95,
+    100 : 100,
+    95 : 84,
+    65 : 14,
+    87 : 36,
+    17 : 6,
 }
 
 # Prover/Verifier sharing a reference to the ModularInverter instantiated in F
