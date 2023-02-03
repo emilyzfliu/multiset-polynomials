@@ -2,16 +2,7 @@ from utils import *
 import random
 
 '''
-    \item The prover sends KZG commitments of $R(\gamma)$, $Z(\delta)$, $Z(\omega \delta)$, $t(\delta)$, $A(\delta)$, $Z_H(\delta)$.
-    \item The verifier checks the following:
-    First, use $\gamma$ to check that $\mathcal{A}$ is included in $\mathcal{B}$ via the given definition:
-    \begin{align*}
-        R(\gamma) \cdot y = Z_B (\gamma)
-    \end{align*}
-    Then, check legitimacy of $y$ by using the $\delta$ commitments to verify the legitimacy of the $t$ and $Z$ polynomials:
-    \begin{align*}
-        t(\delta) = \frac{1}{Z_H(\delta)}\left(\left(Z(\omega \delta) - Z(\delta) + \frac{y}{N}\right) \left(\gamma - A(X)\right) - 1\right)
-    \end{align*}
+    Implementation of lookup argument in https://zkresear.ch/t/new-lookup-argument/32.
 
 '''
 P = 10**9 + 7
@@ -99,10 +90,16 @@ class Prover:
                 self.N = self.W.n # the order of the roots of unity Z is evaluated over
                 self.y = W.evaluate(self.gamma, self.N)
                 self.Z1 = Z1 # the value that Z takes on at Z(1) = Z(omega^0) = Z(omega^N)
+                self.omegas = [] #TODO: omega**k for k in range self.N + 1
+                self.evals = [self.z_omega(k) for k in range(self.N+1)]
+                self.poly = LagrangeInterpolationPoly(self.omegas, self.evals)
             
-            def evaluate(self, k):
+            def z_omega(self, k):
                 '''Evaluates Z(omega^k).'''
                 return self.Z1 - (self.y / self.N) * k + self.W.evaluate(self.gamma, k)
+            
+            def evaluate(self, x):
+                return self.poly.evaluate(x)
 
         class t():
             #  t(x) := \frac{1}{Z_H(X)} \left(\left(Z(\omega X) - Z(X) + \frac{y}{N}\right) \left(\gamma - A(X)\right) - 1\right)

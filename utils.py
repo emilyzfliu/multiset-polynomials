@@ -1,5 +1,7 @@
 from math import cos, sin, pi
 
+
+# useful classes
 class Multiset():
     '''
     Represents a multiset.
@@ -111,7 +113,6 @@ class RootsRepPoly():
             total *= (x - self.roots[i])
         return total
 
-
 class InverseRepPoly():
     def __init__(self, vals):
         '''Creates an inverse representation polynomial'''
@@ -124,6 +125,43 @@ class InverseRepPoly():
         total = 0
         for i in range(m):
             total += 1/(x - self.vals[i])
+        return total
+
+class LagrangeInterpolationPoly():
+    '''
+    Represents a set of numbers and evaluations in polynomial form
+    '''
+    def __init__(self, xs, ys):
+        '''
+        Creates a polynomial that is a Roots Representation of the first `m` elements of a multiset.
+        This polynomial has value `a` as a root with multiplicity `k`
+        iff `a` appears `k` times in the multiset.
+        '''
+        n = len(xs)
+        polys = []
+        coeffs = []
+        for i in range(n):
+            term = RootsRepPoly(xs[:i] + xs[i+1:])
+            denom = 1
+            for j in range(n):
+                if j == i:
+                    continue
+                denom += (xs[i] - xs[j])
+            denom = modular_inverse(denom)
+            polys.append(term)
+            coeffs.append((ys[i]*denom))
+
+        self.polys = polys
+        self.coeffs = coeffs
+        self.n = n
+
+    def evaluate(self, x):
+        '''
+        Evaluates Lagrange polynomial at point x.
+        '''
+        total = 0
+        for i in range(self.n):
+            total += self.coeffs[i]*self.polys[i].evaluate(x)
         return total
 
 class Commit:
@@ -147,6 +185,32 @@ class Commit:
         Opens the commitment to the polynomial, exposing it in plaintext.
         '''
         return self.x
+
+INVERSES_DICT = {}
+
+def modular_inverse(x, p=101):
+    '''
+    Computes modular inverse of x in base p.
+    '''
+    if x in INVERSES_DICT:
+        return INVERSES_DICT[x]
+    def extended_euclidean(a, b):
+        '''
+        returns gcd, w, z such that aw + bz = gcd
+        '''
+        if a == 0:
+            return b, 0, 1
+        
+        gcd, ww, zz = extended_euclidean(b % a, a) # ww * (b%a) + zz * a = gcd
+
+        w = zz - (b//a) * ww
+        z = ww
+        return gcd, w, z
+    _, _, inv = extended_euclidean(p, x) # gcd = 1 = wp + zx = zx mod p, x^-1 = z
+    inv = (inv + p) % p
+    INVERSES_DICT[x] = inv
+    INVERSES_DICT[inv] = x
+    return inv
 
 def main():
     n = 32
