@@ -48,21 +48,26 @@ class LagrangeBasis():
         '''
         Returns L_i(x), i.e. the evaluation of the ith Lagrange basis polynomial at x
         '''
-        if x in range(self.N):
-            # special subcase with faster computation
-            # this is also necessary because using the typical formula will lead
-            # to the polynomial not being defined at L_i(i)
-            return 1 if (self.omega**i % self.P) == x else 0
+        # if x in range(self.N):
+        #     # special subcase with faster computation
+        #     # this is also necessary because using the typical formula will lead
+        #     # to the polynomial not being defined at L_i(i)
+        #     return 1 if (self.omega**i % self.P) == x else 0
 
         total = 1
         ith_root = (self.omega**i) % self.P
         for j in range(self.N):
             if i != j:
                 jth_root = (self.omega**j) % self.P
-                difference = ith_root - jth_root
-                if difference < 0:
-                    difference += self.P
-                total *= (x - jth_root) * self.modular_inverter.modular_inverse(difference)
+                denominator = ith_root - jth_root
+                if denominator < 0:
+                    denominator += self.P
+                
+                numerator = x - jth_root
+                if numerator < 0:
+                    numerator += self.P
+
+                total *= numerator * self.modular_inverter.modular_inverse(denominator)
         return total % self.P
 
 class ModularInverter:
