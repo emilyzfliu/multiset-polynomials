@@ -172,7 +172,7 @@ class Prover:
             def __init__(self, A, B):
                 self.A = A
                 self.B = B
-                self.A_prime = A + B[0] * (N - len(A))
+                self.A_prime = A + [B[0]] * (N - len(A))
                 assert len(self.A_prime) == N
 
                 self.Z_B = RootsRepPoly(self.B)
@@ -222,7 +222,7 @@ class Prover:
             
             def z_omega(self, k):
                 '''Evaluates Z(omega^k).'''
-                term1 = self.y * MODULAR_INVERTER(self.N) * k
+                term1 = self.y * MODULAR_INVERTER.modular_inverse(self.N) * k
                 term2 = self.W_A.evaluate(self.gamma, k)
                 return (self.Z_1 - term1 + term2) % P
             
