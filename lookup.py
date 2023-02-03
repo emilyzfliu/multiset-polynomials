@@ -1,7 +1,7 @@
 '''
 Implementation of lookup argument in https://zkresear.ch/t/new-lookup-argument/32.
 '''
-from utils import Commit, modular_inverse
+from utils import Commit, ModularInverter
 import random
 
 # we will work over the finite field Z_101 as a toy example
