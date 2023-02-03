@@ -90,7 +90,7 @@ class LagrangeInterpolationPoly():
     '''
     Represents a set of numbers and evaluations in polynomial form
     '''
-    def __init__(self, F, xs, ys):
+    def __init__(self, xs, ys):
         '''
         Creates a polynomial that is a Roots Representation of the first `m` elements of a multiset.
         This polynomial has value `a` as a root with multiplicity `k`
@@ -110,7 +110,6 @@ class LagrangeInterpolationPoly():
             polys.append(term)
             coeffs.append((ys[i]*denom))
 
-        self.F = F
         self.polys = polys
         self.coeffs = coeffs
         self.n = n
@@ -122,7 +121,7 @@ class LagrangeInterpolationPoly():
         total = 0
         for i in range(self.n):
             total += self.coeffs[i]*self.polys[i].evaluate(x)
-        return total % self.F.P
+        return total % P
 
 class Z_H:
     '''
@@ -135,15 +134,15 @@ class Z_H:
 
     Z_H is public because it is specified wholly by N.
     '''
-    def __init__(self, F):
-        self.F = F
+    def __init__(self):
+        pass
     
     def evaluate(self, x):
         '''Computes Z_H(x).'''
         total = 1
-        for k in range(self.F.N):
-            total *= (x - (self.F.omega**k))
-        return total % self.F.P
+        for k in range(N):
+            total *= (x - (OMEGA**k))
+        return total % P
 
 
 class Prover:
@@ -211,7 +210,7 @@ class Prover:
                 self.Z1 = Z1 # the value that Z takes on at Z(1) = Z(omega^0) = Z(omega^N)
                 self.omegas = [] #TODO: omega**k for k in range self.N + 1
                 self.evals = [self.z_omega(k) for k in range(self.N+1)]
-                self.poly = LagrangeInterpolationPoly(self.F, self.omegas, self.evals)
+                self.poly = LagrangeInterpolationPoly(self.omegas, self.evals)
             
             def z_omega(self, k):
                 '''Evaluates Z(omega^k).'''
@@ -320,7 +319,7 @@ class Verifier:
         gamma = self.view['gamma']
         A_d = self.view['A(delta)']
         delta = self.view['delta']
-        Z_H_d = Z_H(F).evaluate(delta)
+        Z_H_d = Z_H().evaluate(delta)
 
 
         # check gamma equality
