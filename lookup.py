@@ -100,13 +100,15 @@ class LagrangeInterpolationPoly():
         polys = []
         coeffs = []
         for i in range(n):
-            term = RootsRepPoly(xs[:i] + xs[i+1:])
             denom = 1
+            factors = []
             for j in range(n):
-                if j == i:
+                if j == i or xs[i] == xs[j]:
                     continue
                 denom += (xs[i] - xs[j])
+                factors.append(xs[j])
             denom = MODULAR_INVERTER.modular_inverse(denom)
+            term = RootsRepPoly(factors)
             polys.append(term)
             coeffs.append((ys[i]*denom))
 
