@@ -6,8 +6,8 @@ import random
 
 # we will work over the finite field Z_101 as a toy example
 P = 101
-# our multiplicative subgroup will be [1, ..., 11]
-N = 11
+# our multiplicative subgroup will be (Z_11 \ {0}, *) = [1, ..., 10]
+N = 10
 OMEGA = 2 # a generator of the subgroup
 SUBGROUP_INVERSES = {
     1 : 1,
@@ -143,7 +143,7 @@ class Z_H:
         '''Computes Z_H(x).'''
         total = 1
         for k in range(N):
-            total *= (x - (OMEGA**k))
+            total *= (x - (OMEGA**k % (N + 1)))
         return total % P
 
 

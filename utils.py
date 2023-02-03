@@ -25,7 +25,8 @@ class Commit:
 
 class LagrangeBasis():
     '''
-    Represents the Lagrange Basis of the n polynomials over a multiplicative subgroup of a finite field.
+    Represents the Lagrange Basis over a multiplicative subgroup of order N.
+    Specifically we assume we are working with the multiplicative subgroup over Z_{N+1} \ {0}.
 
     N: order of the multiplicative subgroup
     omega: a generator of the subgroup
@@ -46,13 +47,22 @@ class LagrangeBasis():
         '''
         Returns L_i(x), i.e. the evaluation of the ith Lagrange basis polynomial at x
         '''
+        if x in range(self.N):
+            # special subcase with faster computation
+            # this is also necessary because using the typical formula will lead
+            # to the polynomial not being defined at L_i(i)
+            return 1 if (self.omega**i % (self.N + 1)) == x else 0
+
         total = 1
-        ith_root = (self.omega**i) % self.N
+        ith_root = (self.omega**i) % (self.N + 1)
         for j in range(self.N):
             if i != j:
-                jth_root = (self.omega**j) % self.N
-                total *= (x - jth_root) * self.inverses_dict[ith_root - jth_root]
-        return total % self.N
+                jth_root = (self.omega**j) % (self.N + 1)
+                difference = ith_root - jth_root
+                if difference < 0:
+                    difference += self.N + 1
+                total *= (x - jth_root) * self.inverses_dict[difference]
+        return total % (self.N + 1)
 
 class ModularInverter:
     '''
