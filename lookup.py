@@ -1,7 +1,7 @@
 '''
 Implementation of lookup argument in https://zkresear.ch/t/new-lookup-argument/32.
 '''
-from utils import *
+from utils import Commit, modular_inverse
 import random
 
 # we will work over the finite field Z_101 as a toy example
@@ -21,6 +21,134 @@ subgroup_inverses = {
     9 : 5,
     10 : 10,
 }
+
+
+class LagrangeBasis():
+    '''
+    Represents the Lagrange Basis of the n polynomials over a multiplicative subgroup.
+
+    N: order of the multiplicative subgroup
+    omega: a generator of the subgroup
+    inverses_dict: a dictionary mapping an element of the subgroup to its inverse
+    '''
+    def __init__(self, N, omega, inverses_dict):
+        self.N = N
+        self.omega = omega
+        self.inverses_dict = inverses_dict
+    
+    def __getitem__(self, i):
+        '''
+        Returns the Lagrange Basis polynomial for the ith element of the subgroup
+        '''
+        return lambda x: self._lagrange_polynomial(i, x)
+
+    def _lagrange_polynomial(self, i, x):
+        '''
+        Returns L_i(x), i.e. the evaluation of the ith Lagrange basis polynomial at x
+        '''
+        total = 1
+        ith_root = (self.omega**i) % self.N
+        for j in range(self.n):
+            if i != j:
+                jth_root = (self.omega**j) % self.N
+                total *= (x - jth_root) / (ith_root - jth_root)
+        return total % self.N
+
+class StandardRepPoly():
+    '''
+    Represents a multiset in its "Standard Representation" polynomial form.
+    '''
+    def __init__(self, coefficients):
+        '''
+        Creates a polynomial that is a Standard Representation of a multiset
+        with `coefficients` as its elements.
+        '''
+        self.coefficients = coefficients
+        self.n = len(self.coefficients)
+        self.L = LagrangeBasis(self.n)
+
+    def evaluate(self, x):
+        '''
+        Evaluates this Standard Representation polynomial at point x.
+        '''
+        total = 0
+        for i, a_i in enumerate(self.coefficients):
+            total += a_i * self.L[i](x)
+        return total
+
+class RootsRepPoly():
+    '''
+    Represents a multiset in its "Roots Representation" polynomial form.
+    '''
+    def __init__(self, roots, m=None):
+        '''
+        Creates a polynomial that is a Roots Representation of the first `m` elements of a multiset.
+        This polynomial has value `a` as a root with multiplicity `k`
+        iff `a` appears `k` times in the multiset.
+        '''
+        self.roots = roots
+        self.n = len(self.roots)
+        self.m = m if m is not None else self.n
+
+    def evaluate(self, x):
+        '''
+        Evaluates this Roots Representation polynomial at point x.
+        '''
+        total = 1
+        for i in range(self.m):
+            total *= (x - self.roots[i])
+        return total
+
+class InverseRepPoly():
+    def __init__(self, vals):
+        '''Creates an inverse representation polynomial'''
+        self.vals = vals
+        self.n = len(self.vals)
+    
+    def evaluate(self, x, m=None):
+        '''Evaluates first m terms of inverse representation at point x'''
+        m = m if m is not None else self.n
+        total = 0
+        for i in range(m):
+            total += 1/(x - self.vals[i])
+        return total
+
+class LagrangeInterpolationPoly():
+    '''
+    Represents a set of numbers and evaluations in polynomial form
+    '''
+    def __init__(self, xs, ys):
+        '''
+        Creates a polynomial that is a Roots Representation of the first `m` elements of a multiset.
+        This polynomial has value `a` as a root with multiplicity `k`
+        iff `a` appears `k` times in the multiset.
+        '''
+        n = len(xs)
+        polys = []
+        coeffs = []
+        for i in range(n):
+            term = RootsRepPoly(xs[:i] + xs[i+1:])
+            denom = 1
+            for j in range(n):
+                if j == i:
+                    continue
+                denom += (xs[i] - xs[j])
+            denom = modular_inverse(denom)
+            polys.append(term)
+            coeffs.append((ys[i]*denom))
+
+        self.polys = polys
+        self.coeffs = coeffs
+        self.n = n
+
+    def evaluate(self, x):
+        '''
+        Evaluates Lagrange polynomial at point x.
+        '''
+        total = 0
+        for i in range(self.n):
+            total += self.coeffs[i]*self.polys[i].evaluate(x)
+        return total
 
 class Z_H:
     '''
