@@ -1,136 +1,11 @@
-from math import cos, sin, pi
-
-class Multiset():
-    '''
-    Represents a multiset.
-    '''
-    def __init__(self, s):
-        '''
-        Creates a multiset from list `s`, where element a with multiplicity k in the multiset
-        appears k times in `s`.
-        '''
-        self.s = s
-
-    def __getitem__(self, idx):
-        return self.s[idx]
-
-    def has_value(self, value):
-        return self.s.count(value)
-
-    def standard_rep(self):
-        '''
-        Returns the Standard Representation polynomial form of this multiset.
-        '''
-        return StandardRepPoly(self.s)
-    
-    def roots_rep(self, m=None):
-        '''
-        Returns the up-to-m Roots Representation polynomial form of this multiset.
-        '''
-        return RootsRepPoly(self.s, m)
-
-class RootsOfUnity():
-    '''
-    Calculates the Nth roots of unity.
-    '''
-    def __init__(self, N):
-        self.N = N
-    
-    def omega(self, k):
-        '''Returns the kth Nth root of unity, omega^k.'''
-        return cos(2*k*pi/self.N) + sin(2*k*pi/self.N)*1j
-
-class LagrangeBasesOfUnity():
-    '''
-    Represents the Lagrange Basis of the n polynomials over the nth roots of unity.
-    '''
-    def __init__(self, n):
-        self.n = n
-        self.roots = RootsOfUnity(self.n)
-    
-    def __getitem__(self, i):
-        '''
-        Returns the Lagrange Basis polynomial for the ith of the nth roots of unity.
-        '''
-        return lambda x: self._lagrange_polynomial(i, x)
-
-    def _lagrange_polynomial(self, i, x):
-        '''
-        Returns L_i(x), i.e. the evaluation of the ith nth root of unity at x.
-        '''
-        total = 1
-        ith_root = self.roots.omega(i)
-        for j in range(self.n):
-            if i != j:
-                jth_root = self.roots.omega(j)
-                total *= (x - jth_root) / (ith_root - jth_root)
-        return total
-
-class StandardRepPoly():
-    '''
-    Represents a multiset in its "Standard Representation" polynomial form.
-    '''
-    def __init__(self, coefficients):
-        '''
-        Creates a polynomial that is a Standard Representation of a multiset
-        with `coefficients` as its elements.
-        '''
-        self.coefficients = coefficients
-        self.n = len(self.coefficients)
-        self.L = LagrangeBasesOfUnity(self.n)
-
-    def evaluate(self, x):
-        '''
-        Evaluates this Standard Representation polynomial at point x.
-        '''
-        total = 0
-        for i, a_i in enumerate(self.coefficients):
-            total += a_i * self.L[i](x)
-        return total
-
-class RootsRepPoly():
-    '''
-    Represents a multiset in its "Roots Representation" polynomial form.
-    '''
-    def __init__(self, roots, m=None):
-        '''
-        Creates a polynomial that is a Roots Representation of the first `m` elements of a multiset.
-        This polynomial has value `a` as a root with multiplicity `k`
-        iff `a` appears `k` times in the multiset.
-        '''
-        self.roots = roots
-        self.n = len(self.roots)
-        self.m = m if m is not None else self.n
-
-    def evaluate(self, x):
-        '''
-        Evaluates this Roots Representation polynomial at point x.
-        '''
-        total = 1
-        for i in range(self.m):
-            total *= (x - self.roots[i])
-        return total
-
-
-class InverseRepPoly():
-    def __init__(self, vals):
-        '''Creates an inverse representation polynomial'''
-        self.vals = vals
-        self.n = len(self.vals)
-    
-    def evaluate(self, x, m=None):
-        '''Evaluates first m terms of inverse representation at point x'''
-        m = m if m is not None else self.n
-        total = 0
-        for i in range(m):
-            total += 1/(x - self.vals[i])
-        return total
+'''
+Utility functions used in `lookup.py` but not specific to the particular protocol.
+'''
 
 class Commit:
     '''
     Represents a cryptographic commitment to a polynomial x (e.g., KZG).
     '''
-
     def __init__(self, x, g=1):
         '''
         Creates a commitment to polynomial `x`.
@@ -148,17 +23,65 @@ class Commit:
         '''
         return self.x
 
-def main():
-    n = 32
+class LagrangeBasis():
+    '''
+    Represents the Lagrange Basis of the n polynomials over a multiplicative subgroup of a finite field.
 
-    L = LagrangeBasesOfUnity(n)
+    N: order of the multiplicative subgroup
+    omega: a generator of the subgroup
+    inverses_dict: a dictionary mapping an element of the subgroup to its inverse
+    '''
+    def __init__(self, N, omega, inverses_dict):
+        self.N = N
+        self.omega = omega
+        self.inverses_dict = inverses_dict
+    
+    def __getitem__(self, i):
+        '''
+        Returns the Lagrange Basis polynomial for the ith element of the subgroup
+        '''
+        return lambda x: self._lagrange_polynomial(i, x)
 
-    for i in range(n):
-        root = L._kth_root_of_unity(i)
-        for j in range(n):
-            print(f'L_{j}(omega^{i}) = {round(L[j](root).real)}')
+    def _lagrange_polynomial(self, i, x):
+        '''
+        Returns L_i(x), i.e. the evaluation of the ith Lagrange basis polynomial at x
+        '''
+        total = 1
+        ith_root = (self.omega**i) % self.N
+        for j in range(self.N):
+            if i != j:
+                jth_root = (self.omega**j) % self.N
+                total *= (x - jth_root) * self.inverses_dict[ith_root - jth_root]
+        return total % self.N
 
+class ModularInverter:
+    '''
+    Class to wrap and memoize the computation of modular inverses in a particular finite field.
+    '''
+    def __init__(self, p=101):
+        self.p = p
+        self.inverses_dict = {}
+    
+    def modular_inverse(self, x):
+        '''Computes modular inverse of x in this finite field'''
+        if x in self.inverses_dict:
+            return self.inverses_dict[x]
 
+        def extended_euclidean(a, b):
+            '''
+            Returns gcd, w, z such that aw + bz = gcd
+            '''
+            if a == 0:
+                return b, 0, 1
+            
+            gcd, ww, zz = extended_euclidean(b % a, a) # ww * (b%a) + zz * a = gcd
 
-if __name__ == '__main__':
-    main()
+            w = zz - (b//a) * ww
+            z = ww
+            return gcd, w, z
+        
+        _, _, inv = extended_euclidean(self.p, x) # gcd = 1 = wp + zx = zx mod p, x^-1 = z
+        inv = (inv + self.p) % self.p
+        self.inverses_dict[x] = inv
+        self.inverses_dict[inv] = x
+        return inv
