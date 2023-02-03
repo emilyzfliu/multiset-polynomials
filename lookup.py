@@ -1,7 +1,7 @@
 '''
 Implementation of lookup argument in https://zkresear.ch/t/new-lookup-argument/32.
 '''
-from utils import Commit, FiniteField
+from utils import Commit, ModularInverter, LagrangeBasis
 import random
 
 # we will work over the finite field Z_101 as a toy example
@@ -24,8 +24,8 @@ SUBGROUP_INVERSES = {
 
 # Prover/Verifier sharing a reference to the ModularInverter instantiated in F
 # will lead to minor speedup due to mutually accessible cachings of computed inverses
-F = FiniteField(P, N, OMEGA, SUBGROUP_INVERSES)
-LAGRANGE_BASIS = F.lagrange_basis
+MODULAR_INVERTER = ModularInverter(P)
+LAGRANGE_BASIS = LagrangeBasis(N, OMEGA, SUBGROUP_INVERSES)
 
 class StandardRepPoly():
     '''
@@ -106,7 +106,7 @@ class LagrangeInterpolationPoly():
                 if j == i:
                     continue
                 denom += (xs[i] - xs[j])
-            denom = F.modular_inverter.modular_inverse(denom)
+            denom = MODULAR_INVERTER.modular_inverse(denom)
             polys.append(term)
             coeffs.append((ys[i]*denom))
 

@@ -23,25 +23,6 @@ class Commit:
         '''
         return self.x
 
-class FiniteField():
-    '''
-    Represents the finite field and multiplicative subgroup used in this protocol.
-    Merely a wrapper for the values and objects to make the Prover/Verifier
-    constructor signatures more principled.
-    '''
-    def __init__(self, P, N, omega, subgroup_inverses):
-        '''
-        Construct a struct representing a finite field of order `P`
-        containing a multiplicative subgroup of order `N`, generator `omega`,
-        and dictionary of inverses `subgroup_inverses`.
-        '''
-        self.P = P
-        self.modular_inverter = ModularInverter(self.P)
-        self.N = N
-        self.omega = omega
-        self.subgroup_inverses = subgroup_inverses
-        self.lagrange_basis = LagrangeBasis(self.N, self.omega, self.subgroup_inverses)
-
 class LagrangeBasis():
     '''
     Represents the Lagrange Basis of the n polynomials over a multiplicative subgroup.
