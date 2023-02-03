@@ -25,7 +25,7 @@ class Commit:
 
 class LagrangeBasis():
     '''
-    Represents the Lagrange Basis of the n polynomials over a multiplicative subgroup.
+    Represents the Lagrange Basis of the n polynomials over a multiplicative subgroup of a finite field.
 
     N: order of the multiplicative subgroup
     omega: a generator of the subgroup
@@ -51,7 +51,7 @@ class LagrangeBasis():
         for j in range(self.N):
             if i != j:
                 jth_root = (self.omega**j) % self.N
-                total *= (x - jth_root) / (ith_root - jth_root)
+                total *= (x - jth_root) * self.inverses_dict[ith_root - jth_root]
         return total % self.N
 
 class ModularInverter:
