@@ -3,6 +3,30 @@ import random
 
 P = 101
 
+class RootsRepPoly():
+    '''
+    Represents a multiset in its "Roots Representation" polynomial form.
+    '''
+    def __init__(self, roots, m=None):
+        '''
+        Creates a polynomial that is a Roots Representation of the first `m` elements of a multiset.
+        This polynomial has value `a` as a root with multiplicity `k`
+        iff `a` appears `k` times in the multiset.
+        '''
+        self.roots = roots
+        self.n = len(self.roots)
+        self.m = m if m is not None else self.n
+
+    def evaluate(self, x):
+        '''
+        Evaluates this Roots Representation polynomial at point x.
+        '''
+        total = 1
+        for i in range(self.m):
+            total *= (x - self.roots[i])
+        return total % P
+
+
 class Prover:
     def __init__(self, A, B, C):
         self.view = {}  # represents the "view" of the Prover: all information visible to them during the interactive protocol
