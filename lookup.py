@@ -152,7 +152,8 @@ class LagrangeInterpolationPoly():
 
 class Z_H:
     '''
-    Represents the vanishing polynomial for the Nth roots of unity.
+    Represents the vanishing polynomial for the multiplicative subgroup
+    contained within the finite field `F`.
 
     The polynomial Z() whose existence is asserted as part of step 3 is only specified to vanish
     over the Nth roots of unity, so we divide by the vanishing polynomial of the Nth roots
@@ -160,16 +161,15 @@ class Z_H:
 
     Z_H is public because it is specified wholly by N.
     '''
-    def __init__(self, N):
-        self.N = N
-        self.roots = RootsOfUnity(self.N)
+    def __init__(self, F):
+        self.F = F
     
     def evaluate(self, x):
         '''Computes Z_H(x).'''
         total = 1
-        for i in range(self.N):
-            total *= (x - self.roots.omega(i))
-        return total % P
+        for k in range(self.F.N):
+            total *= (x - (self.F.omega**k))
+        return total % self.F.P
 
 
 class Prover:
@@ -179,6 +179,7 @@ class Prover:
         '''
         self.view = {} # represents the "view" of the Prover: all information visible to them during the interactive protocol
         self.F = F
+
         self.view['A'] = A
         self.view['B'] = B
 
@@ -193,6 +194,8 @@ class Prover:
     
     def step1(self):
         '''R = Z_B * W_A'''
+        P = self.F.P
+
         class R():
             # A = [a_1, a_2, ... a_N]
             # B = [b_1, b_2, ... b_n]
@@ -224,6 +227,8 @@ class Prover:
         return output
 
     def step3(self):
+        P = self.F.P
+
         class Z():
             '''
             Represents the polynomial Z which is asserted to exist and have particular properties
@@ -307,9 +312,9 @@ class Verifier:
         Creates a Verifier engaging in this protocol over finite field `F`.
         '''
         self.view = {} # represents the "view" of the Verifier: all information visible to them during the interactive protocol
+        
         self.F = F
         self.view['B'] = B
-        # TODO refactor as multiset
     
     def receive(self, message):
         '''
@@ -328,13 +333,15 @@ class Verifier:
         yet still have the polynomial identities coincidentally check out on this uniformly
         sampled field point is quite low, assuming the polynomials have degree << |F|.
         '''
-        output = {'gamma': random.randint(0, self.F.P)}
+        P = self.F.P
+        output = {'gamma': random.randint(0, P)}
         self.view.update(**output)
         return output
 
     def step4(self):
         '''Verifier issues a second challenge, called delta, for t'''
-        output = {'delta': random.randint(0, self.F.P)}
+        P = self.F.P
+        output = {'delta': random.randint(0, P)}
         self.view.update(**output)
         return output
     
@@ -352,7 +359,7 @@ class Verifier:
         gamma = self.view['gamma']
         A_d = self.view['A(delta)']
         delta = self.view['delta']
-        Z_H_d = Z_H(N).evaluate(delta)
+        Z_H_d = Z_H(self.F).evaluate(delta)
 
 
         # check gamma equality
