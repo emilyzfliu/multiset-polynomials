@@ -23,6 +23,56 @@ class Commit:
         '''
         return self.x
 
+class FiniteField():
+    '''
+    Represents the finite field and multiplicative subgroup used in this protocol.
+    Merely a wrapper for the values and objects to make the Prover/Verifier
+    constructor signatures more principled.
+    '''
+    def __init__(self, P, N, omega, subgroup_inverses):
+        '''
+        Construct a struct representing a finite field of order `P`
+        containing a multiplicative subgroup of order `N`, generator `omega`,
+        and dictionary of inverses `subgroup_inverses`.
+        '''
+        self.P = P
+        self.modular_inverter = ModularInverter(self.P)
+        self.N = N
+        self.omega = omega
+        self.subgroup_inverses = subgroup_inverses
+        self.lagrange_basis = LagrangeBasis(self.N, self.omega, self.subgroup_inverses)
+
+class LagrangeBasis():
+    '''
+    Represents the Lagrange Basis of the n polynomials over a multiplicative subgroup.
+
+    N: order of the multiplicative subgroup
+    omega: a generator of the subgroup
+    inverses_dict: a dictionary mapping an element of the subgroup to its inverse
+    '''
+    def __init__(self, N, omega, inverses_dict):
+        self.N = N
+        self.omega = omega
+        self.inverses_dict = inverses_dict
+    
+    def __getitem__(self, i):
+        '''
+        Returns the Lagrange Basis polynomial for the ith element of the subgroup
+        '''
+        return lambda x: self._lagrange_polynomial(i, x)
+
+    def _lagrange_polynomial(self, i, x):
+        '''
+        Returns L_i(x), i.e. the evaluation of the ith Lagrange basis polynomial at x
+        '''
+        total = 1
+        ith_root = (self.omega**i) % self.N
+        for j in range(self.n):
+            if i != j:
+                jth_root = (self.omega**j) % self.N
+                total *= (x - jth_root) / (ith_root - jth_root)
+        return total % self.N
+
 class ModularInverter:
     '''
     Class to wrap and memoize the computation of modular inverses in a particular finite field.

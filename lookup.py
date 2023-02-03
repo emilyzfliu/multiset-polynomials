@@ -1,58 +1,30 @@
 '''
 Implementation of lookup argument in https://zkresear.ch/t/new-lookup-argument/32.
 '''
-from utils import Commit, ModularInverter
+from utils import Commit, FiniteField, LagrangeBasis, ModularInverter
 import random
 
-class FiniteField():
-    '''
-    Represents the finite field and multiplicative subgroup used in this protocol.
-    Merely a wrapper for the values and objects to make the Prover/Verifier
-    constructor signatures more principled.
-    '''
-    def __init__(self, P, N, omega, subgroup_inverses):
-        '''
-        Construct a struct representing a finite field of order `P`
-        containing a multiplicative subgroup of order `N`, generator `omega`,
-        and dictionary of inverses `subgroup_inverses`.
-        '''
-        self.P = P
-        self.modular_inverter = ModularInverter(self.P)
-        self.N = N
-        self.omega = omega
-        self.subgroup_inverses = subgroup_inverses
-        self.lagrange_basis = LagrangeBasis(self.N, self.omega, self.subgroup_inverses)
+# we will work over the finite field Z_101 as a toy example
+P = 101
+# our multiplicative subgroup will be [1, ..., 11]
+N = 11
+omega = 2 # a generator of the subgroup
+subgroup_inverses = {
+    1 : 1,
+    2 : 6,
+    3 : 4,
+    4 : 3,
+    5 : 9,
+    6 : 2,
+    7 : 8,
+    8 : 7,
+    9 : 5,
+    10 : 10,
+}
 
-class LagrangeBasis():
-    '''
-    Represents the Lagrange Basis of the n polynomials over a multiplicative subgroup.
-
-    N: order of the multiplicative subgroup
-    omega: a generator of the subgroup
-    inverses_dict: a dictionary mapping an element of the subgroup to its inverse
-    '''
-    def __init__(self, N, omega, inverses_dict):
-        self.N = N
-        self.omega = omega
-        self.inverses_dict = inverses_dict
-    
-    def __getitem__(self, i):
-        '''
-        Returns the Lagrange Basis polynomial for the ith element of the subgroup
-        '''
-        return lambda x: self._lagrange_polynomial(i, x)
-
-    def _lagrange_polynomial(self, i, x):
-        '''
-        Returns L_i(x), i.e. the evaluation of the ith Lagrange basis polynomial at x
-        '''
-        total = 1
-        ith_root = (self.omega**i) % self.N
-        for j in range(self.n):
-            if i != j:
-                jth_root = (self.omega**j) % self.N
-                total *= (x - jth_root) / (ith_root - jth_root)
-        return total % self.N
+# Prover/Verifier sharing a reference to the ModularInverter instantiated in F
+# will lead to minor speedup due to mutually accessible cachings of computed inverses
+F = FiniteField(P, N, omega, subgroup_inverses)
 
 class StandardRepPoly():
     '''
@@ -376,27 +348,6 @@ class Verifier:
         return 'accept' if gamma_equality and delta_equality else 'reject'
 
 def main():
-    # we will work over the finite field Z_101 as a toy example
-    P = 101
-    # our multiplicative subgroup will be [1, ..., 11]
-    N = 11
-    omega = 2 # a generator of the subgroup
-    subgroup_inverses = {
-        1 : 1,
-        2 : 6,
-        3 : 4,
-        4 : 3,
-        5 : 9,
-        6 : 2,
-        7 : 8,
-        8 : 7,
-        9 : 5,
-        10 : 10,
-    }
-    # Prover/Verifier sharing a reference to the ModularInverter instantiated in F
-    # will lead to minor speedup due to mutually accessible cachings of computed inverses
-    F = FiniteField(P, N, omega, subgroup_inverses)
-
     # the premise is that A is private to the prover, but B is publicly known
     A = [1, 2, 7]
     B = [1, 2, 3, 7, 9]
