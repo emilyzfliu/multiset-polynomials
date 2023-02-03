@@ -299,15 +299,15 @@ class Verifier:
         yet still have the polynomial identities coincidentally check out on this uniformly
         sampled field point is quite low, assuming the polynomials have degree << |F|.
         '''
-        output = {'gamma': random.randint(0, P)}
-        self.view.update(**output)
-        return output
+        gamma = random.randint(0, P)
+        self.view['gamma'] = gamma
+        return {'gamma': gamma}
 
     def step4(self):
         '''Verifier issues a second challenge, called delta, for t'''
-        output = {'delta': random.randint(0, P)}
-        self.view.update(**output)
-        return output
+        delta = random.randint(0, P)
+        self.view['delta'] = delta
+        return {'delta': delta}
     
     def step6(self):
         '''Verifier checks the equalities for their two challenges'''
