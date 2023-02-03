@@ -58,14 +58,15 @@ class StandardRepPoly():
     '''
     Represents a multiset in its "Standard Representation" polynomial form.
     '''
-    def __init__(self, coefficients):
+    def __init__(self, N, coefficients):
         '''
         Creates a polynomial that is a Standard Representation of a multiset
         with `coefficients` as its elements.
         '''
+        self.N = N
         self.coefficients = coefficients
         self.n = len(self.coefficients)
-        self.L = LagrangeBasis(self.n)
+        self.L = LagrangeBasis(self.N)
 
     def evaluate(self, x):
         '''
@@ -195,6 +196,7 @@ class Prover:
     def step1(self):
         '''R = Z_B * W_A'''
         P = self.F.P
+        N = self.F.N
 
         class R():
             # A = [a_1, a_2, ... a_N]
@@ -221,13 +223,14 @@ class Prover:
         
         A = self.view['A']
         B = self.view['B']
-        output = {'A_c': Commit(StandardRepPoly(A)),
+        output = {'A_c': Commit(StandardRepPoly(N, A)),
                   'R_c': Commit(R(A, B))}
         self.view.update(**output)
         return output
 
     def step3(self):
         P = self.F.P
+        N = self.F.N
 
         class Z():
             '''
@@ -274,7 +277,7 @@ class Prover:
         B = self.view['B']
         gamma = self.view['gamma']
 
-        A_poly = StandardRepPoly(A)
+        A_poly = StandardRepPoly(N, A)
         W_A = InverseRepPoly(A)
         y = W_A(gamma)
         Z_B = RootsRepPoly(B)
@@ -387,11 +390,20 @@ def main():
         9 : 5,
         10 : 10,
     }
+    # Prover/Verifier sharing a reference to the ModularInverter instantiated in F
+    # will lead to minor speedup due to mutually accessible cachings of computed inverses
     F = FiniteField(P, N, omega, subgroup_inverses)
 
+    # the premise is that A is private to the prover, but B is publicly known
     A = [1, 2, 7]
     B = [1, 2, 3, 7, 9]
-    # the premise is that A is private to the prover, but B is publicly known
+
+    # routine assertions — otherwise the protocol doesn't apply as this isn't an accepting instance of the language
+    assert N < F
+    assert len(A) <= N
+    assert len(B) <= N
+    assert set(A).issubset(set(B))
+
     prover = Prover(F, A, B)
     verifier = Verifier(F, B)
 
