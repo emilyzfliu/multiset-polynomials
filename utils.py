@@ -52,18 +52,18 @@ class LagrangeBasis():
             # special subcase with faster computation
             # this is also necessary because using the typical formula will lead
             # to the polynomial not being defined at L_i(i)
-            return 1 if (self.omega**i % (self.N + 1)) == x else 0
+            return 1 if (self.omega**i % self.P) == x else 0
 
         total = 1
-        ith_root = (self.omega**i) % (self.N + 1)
+        ith_root = (self.omega**i) % self.P
         for j in range(self.N):
             if i != j:
-                jth_root = (self.omega**j) % (self.N + 1)
+                jth_root = (self.omega**j) % self.P
                 difference = ith_root - jth_root
                 if difference < 0:
-                    difference += self.N + 1
+                    difference += self.P
                 total *= (x - jth_root) * self.inverses_dict[difference]
-        return total % (self.N + 1)
+        return total % self.P
 
 class ModularInverter:
     '''
