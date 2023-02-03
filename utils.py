@@ -30,13 +30,13 @@ class LagrangeBasis():
 
     N: order of the multiplicative subgroup
     omega: a generator of the subgroup
-    inverses_dict: a dictionary mapping an element of the subgroup to its inverse
+    modular_inverter: a ModularInverter to take inverses
     '''
-    def __init__(self, P, N, omega, inverses_dict):
+    def __init__(self, P, N, omega, modular_inverter):
         self.P = P
         self.N = N
         self.omega = omega
-        self.inverses_dict = inverses_dict
+        self.modular_inverter = modular_inverter
     
     def __getitem__(self, i):
         '''
@@ -62,7 +62,7 @@ class LagrangeBasis():
                 difference = ith_root - jth_root
                 if difference < 0:
                     difference += self.P
-                total *= (x - jth_root) * self.inverses_dict[difference]
+                total *= (x - jth_root) * self.modular_inverter.modular_inverse(difference)
         return total % self.P
 
 class ModularInverter:

@@ -10,23 +10,11 @@ P = 101
 # concretely, we are using [1, 6, 36, 14, 84, 100, 95, 65, 87, 17], which is of order 10
 OMEGA = 6 # the generator of this subgroup
 N = 10
-SUBGROUP_INVERSES = {
-    1 : 1,
-    6 : 17,
-    36 : 87,
-    14 : 65,
-    84 : 95,
-    100 : 100,
-    95 : 84,
-    65 : 14,
-    87 : 36,
-    17 : 6,
-}
 
 # Prover/Verifier sharing a reference to the ModularInverter instantiated in F
 # will lead to minor speedup due to mutually accessible cachings of computed inverses
 MODULAR_INVERTER = ModularInverter(P)
-LAGRANGE_BASIS = LagrangeBasis(P, N, OMEGA, SUBGROUP_INVERSES)
+LAGRANGE_BASIS = LagrangeBasis(P, N, OMEGA, MODULAR_INVERTER)
 
 class StandardRepPoly():
     '''
