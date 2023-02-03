@@ -1,15 +1,15 @@
 '''
 Implementation of lookup argument in https://zkresear.ch/t/new-lookup-argument/32.
 '''
-from utils import Commit, FiniteField, LagrangeBasis, ModularInverter
+from utils import Commit, FiniteField
 import random
 
 # we will work over the finite field Z_101 as a toy example
 P = 101
 # our multiplicative subgroup will be [1, ..., 11]
 N = 11
-omega = 2 # a generator of the subgroup
-subgroup_inverses = {
+OMEGA = 2 # a generator of the subgroup
+SUBGROUP_INVERSES = {
     1 : 1,
     2 : 6,
     3 : 4,
@@ -24,21 +24,21 @@ subgroup_inverses = {
 
 # Prover/Verifier sharing a reference to the ModularInverter instantiated in F
 # will lead to minor speedup due to mutually accessible cachings of computed inverses
-F = FiniteField(P, N, omega, subgroup_inverses)
+F = FiniteField(P, N, OMEGA, SUBGROUP_INVERSES)
+LAGRANGE_BASIS = F.lagrange_basis
 
 class StandardRepPoly():
     '''
     Represents a multiset in its "Standard Representation" polynomial form.
     '''
-    def __init__(self, F, coefficients):
+    def __init__(self, coefficients):
         '''
         Creates a polynomial that is a Standard Representation of a multiset
         with `coefficients` as its elements.
         '''
-        self.F = F
         self.coefficients = coefficients
         self.n = len(self.coefficients)
-        self.L = self.F.lagrange_basis
+        self.L = LAGRANGE_BASIS
 
     def evaluate(self, x):
         '''
@@ -47,19 +47,18 @@ class StandardRepPoly():
         total = 0
         for i, a_i in enumerate(self.coefficients):
             total += a_i * self.L[i](x)
-        return total % self.F.P
+        return total % P
 
 class RootsRepPoly():
     '''
     Represents a multiset in its "Roots Representation" polynomial form.
     '''
-    def __init__(self, F, roots, m=None):
+    def __init__(self, roots, m=None):
         '''
         Creates a polynomial that is a Roots Representation of the first `m` elements of a multiset.
         This polynomial has value `a` as a root with multiplicity `k`
         iff `a` appears `k` times in the multiset.
         '''
-        self.F = F
         self.roots = roots
         self.n = len(self.roots)
         self.m = m if m is not None else self.n
@@ -71,12 +70,11 @@ class RootsRepPoly():
         total = 1
         for i in range(self.m):
             total *= (x - self.roots[i])
-        return total % self.F.P
+        return total % P
 
 class InverseRepPoly():
-    def __init__(self, F, vals):
+    def __init__(self, vals):
         '''Creates an inverse representation polynomial'''
-        self.F = F
         self.vals = vals
         self.n = len(self.vals)
     
@@ -86,7 +84,7 @@ class InverseRepPoly():
         total = 0
         for i in range(m):
             total += 1/(x - self.vals[i])
-        return total % self.F.P
+        return total % P
 
 class LagrangeInterpolationPoly():
     '''
@@ -102,7 +100,7 @@ class LagrangeInterpolationPoly():
         polys = []
         coeffs = []
         for i in range(n):
-            term = RootsRepPoly(F, xs[:i] + xs[i+1:])
+            term = RootsRepPoly(xs[:i] + xs[i+1:])
             denom = 1
             for j in range(n):
                 if j == i:
@@ -149,13 +147,11 @@ class Z_H:
 
 
 class Prover:
-    def __init__(self, F, A, B):
+    def __init__(self, A, B):
         '''
-        Creats a Prover engaging in this protocol over finite field `F`.
+        Creates a Prover engaging in this protocol.
         '''
         self.view = {} # represents the "view" of the Prover: all information visible to them during the interactive protocol
-        self.F = F
-
         self.view['A'] = A
         self.view['B'] = B
 
@@ -170,9 +166,6 @@ class Prover:
     
     def step1(self):
         '''R = Z_B * W_A'''
-        P = self.F.P
-        N = self.F.N
-
         class R():
             # A = [a_1, a_2, ... a_N]
             # B = [b_1, b_2, ... b_n]
@@ -187,8 +180,8 @@ class Prover:
                 # the term for elt. i has the coefficients a_1,...,a_i-1,a_i+1,...,aN,(all elts of b not in a)
                 # so we can factor out the (all elts of b not in a) term, then compute the a-elt terms separately
                 for i in range(self.n):
-                    self.terms.append(RootsRepPoly(self.F, self.elts_a[:i] + self.elts_a[i+1:]))
-                self.extra_poly = RootsRepPoly(self.F, self.extra_elts)
+                    self.terms.append(RootsRepPoly(self.elts_a[:i] + self.elts_a[i+1:]))
+                self.extra_poly = RootsRepPoly(self.extra_elts)
             
             def evaluate(self, x):
                 ret = 0
@@ -198,15 +191,12 @@ class Prover:
         
         A = self.view['A']
         B = self.view['B']
-        output = {'A_c': Commit(StandardRepPoly(self.F, A)),
+        output = {'A_c': Commit(StandardRepPoly(A)),
                   'R_c': Commit(R(A, B))}
         self.view.update(**output)
         return output
 
     def step3(self):
-        P = self.F.P
-        N = self.F.N
-
         class Z():
             '''
             Represents the polynomial Z which is asserted to exist and have particular properties
@@ -233,7 +223,7 @@ class Prover:
         class t():
             #  t(x) := \frac{1}{Z_H(X)} \left(\left(Z(\omega X) - Z(X) + \frac{y}{N}\right) \left(\gamma - A(X)\right) - 1\right)
             def __init__(self, Z, y, gamma, A):
-                self.Z_H = RootsRepPoly(self.F, [])
+                self.Z_H = RootsRepPoly([])
                 self.Z = Z
                 self.y = y
                 self.gamma = gamma
@@ -252,10 +242,10 @@ class Prover:
         B = self.view['B']
         gamma = self.view['gamma']
 
-        A_poly = StandardRepPoly(self.F, A)
-        W_A = InverseRepPoly(self.F, A)
+        A_poly = StandardRepPoly(A)
+        W_A = InverseRepPoly(A)
         y = W_A(gamma)
-        Z_B = RootsRepPoly(self.F, B)
+        Z_B = RootsRepPoly(B)
 
         self.view['Z'] = Z(gamma, W_A)
         self.view['t'] = t(Z, y, gamma, A_poly)
@@ -285,13 +275,11 @@ class Prover:
         return output
 
 class Verifier:
-    def __init__(self, F, B):
+    def __init__(self, B):
         '''
-        Creates a Verifier engaging in this protocol over finite field `F`.
+        Creates a Verifier engaging in this protocol.
         '''
         self.view = {} # represents the "view" of the Verifier: all information visible to them during the interactive protocol
-        
-        self.F = F
         self.view['B'] = B
     
     def receive(self, message):
@@ -311,23 +299,18 @@ class Verifier:
         yet still have the polynomial identities coincidentally check out on this uniformly
         sampled field point is quite low, assuming the polynomials have degree << |F|.
         '''
-        P = self.F.P
         output = {'gamma': random.randint(0, P)}
         self.view.update(**output)
         return output
 
     def step4(self):
         '''Verifier issues a second challenge, called delta, for t'''
-        P = self.F.P
         output = {'delta': random.randint(0, P)}
         self.view.update(**output)
         return output
     
     def step6(self):
         '''Verifier checks the equalities for their two challenges'''
-        P = self.F.P
-        N = self.F.N
-
         R_g = self.view['R(gamma)']
         y = self.view['y']
         Z_B_g = self.view['Z_B(gamma)']
@@ -337,7 +320,7 @@ class Verifier:
         gamma = self.view['gamma']
         A_d = self.view['A(delta)']
         delta = self.view['delta']
-        Z_H_d = Z_H(self.F).evaluate(delta)
+        Z_H_d = Z_H(F).evaluate(delta)
 
 
         # check gamma equality
@@ -358,8 +341,8 @@ def main():
     assert len(B) <= N
     assert set(A).issubset(set(B))
 
-    prover = Prover(F, A, B)
-    verifier = Verifier(F, B)
+    prover = Prover(A, B)
+    verifier = Verifier(B)
 
     message1 = prover.step1()
     verifier.receive(message1)
