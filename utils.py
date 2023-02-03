@@ -31,42 +31,36 @@ class Multiset():
         '''
         return RootsRepPoly(self.s, m)
 
-class RootsOfUnity():
+class LagrangeBasis():
     '''
-    Calculates the Nth roots of unity.
-    '''
-    def __init__(self, N):
-        self.N = N
-    
-    def omega(self, k):
-        '''Returns the kth Nth root of unity, omega^k.'''
-        return cos(2*k*pi/self.N) + sin(2*k*pi/self.N)*1j
+    Represents the Lagrange Basis of the n polynomials over a multiplicative subgroup.
 
-class LagrangeBasesOfUnity():
+    N: order of the multiplicative subgroup
+    omega: a generator of the subgroup
+    inverses_dict: a dictionary mapping an element of the subgroup to its inverse
     '''
-    Represents the Lagrange Basis of the n polynomials over the nth roots of unity.
-    '''
-    def __init__(self, n):
-        self.n = n
-        self.roots = RootsOfUnity(self.n)
+    def __init__(self, N, omega, inverses_dict):
+        self.N = N
+        self.omega = omega
+        self.inverses_dict = inverses_dict
     
     def __getitem__(self, i):
         '''
-        Returns the Lagrange Basis polynomial for the ith of the nth roots of unity.
+        Returns the Lagrange Basis polynomial for the ith element of the subgroup
         '''
         return lambda x: self._lagrange_polynomial(i, x)
 
     def _lagrange_polynomial(self, i, x):
         '''
-        Returns L_i(x), i.e. the evaluation of the ith nth root of unity at x.
+        Returns L_i(x), i.e. the evaluation of the ith Lagrange basis polynomial at x
         '''
         total = 1
-        ith_root = self.roots.omega(i)
+        ith_root = (self.omega**i) % self.N
         for j in range(self.n):
             if i != j:
-                jth_root = self.roots.omega(j)
+                jth_root = (self.omega**j) % self.N
                 total *= (x - jth_root) / (ith_root - jth_root)
-        return total
+        return total % self.N
 
 class StandardRepPoly():
     '''
@@ -79,7 +73,7 @@ class StandardRepPoly():
         '''
         self.coefficients = coefficients
         self.n = len(self.coefficients)
-        self.L = LagrangeBasesOfUnity(self.n)
+        self.L = LagrangeBasis(self.n)
 
     def evaluate(self, x):
         '''
@@ -213,14 +207,7 @@ def modular_inverse(x, p=101):
     return inv
 
 def main():
-    n = 32
-
-    L = LagrangeBasesOfUnity(n)
-
-    for i in range(n):
-        root = L._kth_root_of_unity(i)
-        for j in range(n):
-            print(f'L_{j}(omega^{i}) = {round(L[j](root).real)}')
+    pass
 
 
 
