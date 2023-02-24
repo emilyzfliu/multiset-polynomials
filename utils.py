@@ -35,9 +35,11 @@ class LagrangeBasis():
     def __init__(self, P, N, omega, modular_inverter):
         self.P = P
         self.N = N
-        self.omega = omega
         self.modular_inverter = modular_inverter
-    
+        self.powers_of_omega = []
+        for i in range(N):
+            self.powers_of_omega.append((omega**i) % self.P)
+
     def __getitem__(self, i):
         '''
         Returns the Lagrange Basis polynomial for the ith element of the subgroup
@@ -55,10 +57,10 @@ class LagrangeBasis():
         #     return 1 if (self.omega**i % self.P) == x else 0
 
         total = 1
-        ith_root = (self.omega**i) % self.P
+        ith_root = (self.powers_of_omega[i]) % self.P
         for j in range(self.N):
             if i != j:
-                jth_root = (self.omega**j) % self.P
+                jth_root = (self.powers_of_omega[j]) % self.P
                 denominator = ith_root - jth_root
                 if denominator < 0:
                     denominator += self.P
