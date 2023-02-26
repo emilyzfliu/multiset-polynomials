@@ -4,6 +4,9 @@ Implementation of lookup argument in https://zkresear.ch/t/new-lookup-argument/3
 from utils import Commit, ModularInverter, LagrangeBasis
 import random
 
+import numpy as np
+from numpy.polynomial import Polynomial
+
 # we will work over the finite field Z_101 as a toy example
 P = 101
 # our multiplicative subgroup will be [1, omega, omega^2, ...]
@@ -16,56 +19,17 @@ N = 10
 MODULAR_INVERTER = ModularInverter(P)
 LAGRANGE_BASIS = LagrangeBasis(P, N, OMEGA, MODULAR_INVERTER)
 
-class StandardRepPoly():
-    '''
-    Represents a multiset in its "Standard Representation" polynomial form.
-    '''
-    def __init__(self, coefficients):
-        '''
-        Creates a polynomial that is a Standard Representation of a multiset
-        with `coefficients` as its elements.
-        '''
-        self.coefficients = coefficients
-        self.n = len(self.coefficients)
-        self.L = LAGRANGE_BASIS
-
-    def evaluate(self, x):
-        '''
-        Evaluates this Standard Representation polynomial at point x.
-        '''
-        total = 0
-        for i, a_i in enumerate(self.coefficients):
-            total += a_i * self.L[i](x)
-        return total % P
-
-class RootsRepPoly():
-    '''
-    Represents a multiset in its "Roots Representation" polynomial form.
-    '''
-    def __init__(self, roots, m=None):
-        '''
-        Creates a polynomial that is a Roots Representation of the first `m` elements of a multiset.
-        This polynomial has value `a` as a root with multiplicity `k`
-        iff `a` appears `k` times in the multiset.
-        '''
-        self.roots = roots
-        self.n = len(self.roots)
-        self.m = m if m is not None else self.n
-
-    def evaluate(self, x):
-        '''
-        Evaluates this Roots Representation polynomial at point x.
-        '''
-        total = 1
-        for i in range(self.m):
-            total *= (x - self.roots[i])
-        return total % P
-
 class InverseRepPoly():
     def __init__(self, vals):
         '''Creates an inverse representation polynomial'''
         self.vals = vals
         self.n = len(self.vals)
+
+    def inv_monomials(self):
+        monomials = []
+        for i in range(self.n):
+            monomials.append(Polynomial.fromroots([self.vals[i]]))
+        return monomials
     
     def evaluate(self, x, m=None):
         '''Evaluates first m terms of inverse representation at point x'''
@@ -97,7 +61,8 @@ class LagrangeInterpolationPoly():
                 denom += (xs[i] - xs[j])
                 factors.append(xs[j])
             denom = MODULAR_INVERTER.modular_inverse(denom)
-            term = RootsRepPoly(factors)
+            term = Polynomial.fromroots(factors)
+            # poly += term
             polys.append(term)
             coeffs.append((ys[i]*denom))
 
@@ -111,7 +76,7 @@ class LagrangeInterpolationPoly():
         '''
         total = 0
         for i in range(self.n):
-            total += self.coeffs[i]*self.polys[i].evaluate(x)
+            total += self.coeffs[i]*np.polyval(list(self.polys[i])[::-1], x)
         return total % P
 
 class Z_H:
@@ -126,7 +91,13 @@ class Z_H:
     Z_H is public because it is specified wholly by N.
     '''
     def __init__(self):
-        pass
+        roots = []
+        for k in range(N):
+            roots.append(OMEGA**k % P)
+        self.polynomial = Polynomial.fromroots(roots)
+
+    def polynomial(self):
+        return self.polynomial
     
     def evaluate(self, x):
         '''Computes Z_H(x).'''
@@ -155,34 +126,26 @@ class Prover:
         self.view.update(**message)
     
     def step1(self):
-        class R():
-            # first, we implicitly extend A to A', which is A padded with elements from B
-            # A = [a_1, a_2, ... a_N]
-            # B = [b_1, b_2, ... b_n]
-            # assume A', B are deduplicated
-            def __init__(self, A, B):
-                self.A = A
-                self.B = B
-                self.A_prime = A + [B[0]] * (N - len(A))
-                assert len(self.A_prime) == N
+        def compute_R(A, B):
+            A_prime = A + [B[0]] * (N - len(A))
+            assert len(A_prime) == N # add padding
+            Z_B = Polynomial.fromroots(B)
+            W_A = InverseRepPoly(A_prime)
+            R = Polynomial([0])
+            W_A_monomials = W_A.inv_monomials()
+            for i in range(len(W_A_monomials)):
+                assert (Z_B % W_A_monomials[i]) == Polynomial([0])
+                poly = Z_B // W_A_monomials[i]
+                R = R + poly
 
-                self.Z_B = RootsRepPoly(self.B)
-                self.W_A = InverseRepPoly(self.A_prime) # remember A is padded here, so we use A prime
-            
-            def evaluate(self, x):
-                Z_B_x = self.Z_B.evaluate(x)
-                W_A_x = self.W_A.evaluate(x)
-                return (Z_B_x * W_A_x) % P
+            return R, Z_B, W_A
         
         A = self.view['A']
         B = self.view['B']
 
-        R = R(A, B)
-        self.view['R'] = R
-        self.view['Z_B'] = R.Z_B
-        self.view['W_A'] = R.W_A
+        self.view['R'], self.view['Z_B'], self.view['W_A'] = compute_R(A, B)
 
-        A_poly = StandardRepPoly(A)
+        A_poly = Polynomial(A)
         self.view['A_poly'] = A_poly
 
         output = {'[A]_1': Commit(self.view['A_poly']), # slightly unfortunate notation calling both the set and polynom A
@@ -233,7 +196,7 @@ class Prover:
             def evaluate(self, x):
                 denom = MODULAR_INVERTER.modular_inverse(self.Z_H.evaluate(x))
                 term1 = self.Z.evaluate(OMEGA*x) - self.Z.evaluate(x) + (y * MODULAR_INVERTER.modular_inverse(N))
-                term2 = gamma - self.A_poly.evaluate(x)
+                term2 = gamma - np.polyval(list(self.A_poly)[::-1], x)
                 return (denom * ((term1 * term2) - 1)) % P
 
         gamma = self.view['gamma']
@@ -247,7 +210,7 @@ class Prover:
         self.view['t'] = t(self.view['Z'], y, gamma, A_poly)
 
         output = {'y': y,
-                  'Z_B(gamma)': Z_B.evaluate(gamma),
+                  'Z_B(gamma)': (np.polyval(list(Z_B)[::-1], gamma)) % P,
                   '[Z]_1': Commit(self.view['Z']),
                   '[t]_1': Commit(self.view['t'])}
         self.view.update(**output)
@@ -263,11 +226,11 @@ class Prover:
         A_poly = self.view['A_poly']
 
         # I guess the prover could save this but they don't need to?
-        output = {'R(gamma)': R.evaluate(gamma),
+        output = {'R(gamma)': np.polyval(list(R)[::-1], gamma) % P,
                   'Z(delta)': Z.evaluate(delta),
                   'Z(w*delta)': Z.evaluate(OMEGA*delta),
                   't(delta)': t.evaluate(delta),
-                  'A_poly(delta)': A_poly.evaluate(delta)}
+                  'A_poly(delta)': np.polyval(list(A_poly)[::-1], delta) % P}
         self.view.update(**output)
         return output
 
@@ -296,7 +259,8 @@ class Verifier:
         yet still have the polynomial identities coincidentally check out on this uniformly
         sampled field point is quite low, assuming the polynomials have degree << |F|.
         '''
-        gamma = random.randint(0, P)
+        # gamma = random.randint(0, P)
+        gamma = 1
         self.view['gamma'] = gamma
         return {'gamma': gamma}
 
@@ -339,8 +303,8 @@ class Verifier:
 
 def main():
     # the premise is that A is private to the prover, but B is publicly known
-    A = [1, 2, 2, 12]
-    B = [1, 2, 3, 7, 9]
+    A = [1, 2, 2, 2, 2]
+    B = [1, 2, 3, 4, 5]
 
     # routine assertions — otherwise the protocol doesn't apply as this isn't an accepting instance of the language
     assert N < P
